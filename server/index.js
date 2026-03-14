@@ -93,11 +93,15 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   const sender = req.body.sender || req.body.from || req.body.phone || 
                  req.query.sender || req.query.from || req.query.phone || req.query.s;
   
-  if (!message_body || message_body === '[message]' || message_body === '%msg%') {
+  if (!message_body || 
+      message_body === '[message]' || 
+      message_body === '%msg%' || 
+      message_body === '{msg}' || 
+      message_body === '{formatted-msg}') {
     console.warn('Invalid Payload: App is sending literal placeholders. Received Body:', JSON.stringify(req.body));
     return res.status(422).json({ 
       error: 'Failed to parse required fields', 
-      details: 'The app is sending the literal tag code instead of the real SMS text. Please check your app variable tags (e.g. use %msg% or {{msg}} instead of [message]).',
+      details: 'The app is sending the literal tag code instead of the real SMS text. PLEASE USE CURLY BRACES {} but make sure the app replaces them. Try using {msg} in your template.',
       raw: message_body 
     });
   }
