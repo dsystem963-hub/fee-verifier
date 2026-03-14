@@ -238,8 +238,8 @@ app.post('/api/v1/admin/approve', (req, res) => {
   }
 });
 
-// Serve index.html for any other routes (SPA)
-app.get('(.*)', (req, res) => {
+// Serve index.html for any other routes (SPA Fallback)
+app.use((req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
