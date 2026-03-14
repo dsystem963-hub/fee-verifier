@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "cd server && npm start",
-    "build": "npm install && cd server && npm install --build-from-source sqlite3 && cd ../client && npm install --legacy-peer-deps && npm run build",
+    "build": "npm install && cd server && npm install && cd ../client && npm install --legacy-peer-deps && npm run build",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   }
 }

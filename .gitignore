@@ -4,3 +4,4 @@ dist/
 *.sqlite
 uploads/
 .DS_Store
+package-lock.json
