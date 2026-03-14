@@ -87,8 +87,11 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   console.log('Body:', JSON.stringify(req.body, null, 2));
 
   // Flexible field mapping to support different apps (Body OR Query)
-  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg || req.query.message_body || req.query.body || req.query.text;
-  const sender = req.body.sender || req.body.from || req.body.phone || req.query.sender || req.query.from;
+  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg || 
+                       req.query.message_body || req.query.body || req.query.text || req.query.message || req.query.msg || req.query.m;
+  
+  const sender = req.body.sender || req.body.from || req.body.phone || 
+                 req.query.sender || req.query.from || req.query.phone || req.query.s;
   
   if (!message_body) {
     console.warn('Payload rejected: message_body is empty. Received Body:', JSON.stringify(req.body), 'Received Query:', JSON.stringify(req.query));
