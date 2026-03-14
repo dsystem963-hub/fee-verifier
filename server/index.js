@@ -238,6 +238,21 @@ app.post('/api/v1/admin/approve', (req, res) => {
   }
 });
 
+// Admin: Force Match (Manual verification for 'Matching' state)
+app.post('/api/v1/admin/force-match', (req, res) => {
+  const { transaction_id, amount, currency, source } = req.body;
+  try {
+    const stmt = db.prepare(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`);
+    stmt.run(transaction_id, amount, currency || 'PKR', source || 'Manual', 'Verified');
+    res.json({ status: 'Verified' });
+  } catch (err) {
+    if (err.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'Transaction already verified' });
+    }
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // Serve index.html for any other routes (SPA Fallback)
 app.use((req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));

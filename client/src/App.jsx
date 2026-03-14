@@ -129,6 +129,21 @@ function App() {
     }
   };
 
+  const forceMatch = async (row) => {
+    try {
+      await axios.post(`${API_BASE}/admin/force-match`, {
+        transaction_id: row.transaction_id,
+        amount: row.amount,
+        currency: row.currency,
+        source: row.source
+      });
+      fetchAdmissionsStatus();
+    } catch (err) {
+      console.error(err);
+      alert('Error verifying manually: ' + (err.response?.data?.error || 'Unknown error'));
+    }
+  };
+
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -178,14 +193,19 @@ function App() {
                         </span>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 flex flex-wrap gap-2">
                       {row.payment_status === 'Pending' && (
-                        <button onClick={() => approvePayment(row.transaction_id)} className="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded transition">
+                        <button onClick={() => approvePayment(row.transaction_id)} className="text-[10px] bg-blue-600 hover:bg-blue-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all duration-300">
                           Approve Payment
                         </button>
                       )}
+                      {!row.payment_status && (
+                        <button onClick={() => forceMatch(row)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all duration-300">
+                          Verify Manually
+                        </button>
+                      )}
                       {row.receipt_image_url && (
-                        <a href={`http://localhost:5000${row.receipt_image_url}`} target="_blank" rel="noreferrer" className="text-xs text-blue-400 underline ml-2">View Receipt</a>
+                        <a href={row.receipt_image_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 hover:bg-blue-600 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-300 hover:text-white">View Receipt</a>
                       )}
                     </td>
                   </tr>
