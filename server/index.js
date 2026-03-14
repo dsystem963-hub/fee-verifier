@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -23,36 +23,32 @@ if (!fs.existsSync(distPath)) {
 
 // Database setup
 const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath);
+const db = new Database(dbPath);
 
 // Initialize Tables
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS payment_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      transaction_id TEXT UNIQUE,
-      amount REAL,
-      currency TEXT,
-      payment_source TEXT,
-      status TEXT,
-      receipt_image_url TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS payment_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transaction_id TEXT UNIQUE,
+    amount REAL,
+    currency TEXT,
+    payment_source TEXT,
+    status TEXT,
+    receipt_image_url TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS admissions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      full_name TEXT,
-      email TEXT,
-      transaction_id TEXT,
-      source TEXT,
-      amount REAL,
-      currency TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-});
+  CREATE TABLE IF NOT EXISTS admissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name TEXT,
+    email TEXT,
+    transaction_id TEXT,
+    source TEXT,
+    amount REAL,
+    currency TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
 
 // Multer setup for receipt uploads
 const storage = multer.diskStorage({
@@ -125,16 +121,16 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   }
 
   if (transaction_id && amount) {
-    const query = `INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`;
-    db.run(query, [transaction_id, amount, 'PKR', payment_source, 'Verified'], function(err) {
-      if (err) {
-        if (err.message.includes('UNIQUE constraint failed')) {
-          return res.status(409).json({ error: 'Transaction already exists' });
-        }
-        return res.status(500).json({ error: 'Database error' });
-      }
+    try {
+      const stmt = db.prepare(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`);
+      stmt.run(transaction_id, amount, 'PKR', payment_source, 'Verified');
       res.status(200).json({ status: 'Parsed & Saved', transaction_id, amount });
-    });
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(409).json({ error: 'Transaction already exists' });
+      }
+      return res.status(500).json({ error: 'Database error' });
+    }
   } else {
     res.status(422).json({ error: 'Failed to parse required fields', raw: message_body });
   }
@@ -150,24 +146,28 @@ app.post('/api/v1/admission/submit', (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const query = `INSERT INTO admissions (full_name, email, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?)`;
-  db.run(query, [fullName, email, tid, source, amount, currency || 'PKR'], function(err) {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    res.status(201).json({ status: 'Submitted', id: this.lastID });
-  });
+  try {
+    const stmt = db.prepare(`INSERT INTO admissions (full_name, email, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?)`);
+    const info = stmt.run(fullName, email, tid, source, amount, currency || 'PKR');
+    res.status(201).json({ status: 'Submitted', id: info.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Verify a TID (Public check)
 app.get('/api/v1/verify-payment/:tid', (req, res) => {
   const { tid } = req.params;
-  db.get(`SELECT * FROM payment_logs WHERE transaction_id = ?`, [tid], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
+  try {
+    const row = db.prepare(`SELECT * FROM payment_logs WHERE transaction_id = ?`).get(tid);
     if (row && row.status === 'Verified') {
       res.json({ verified: true, data: row });
     } else {
       res.json({ verified: false, message: 'Matching process active...' });
     }
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Submit International Payment Evidence
@@ -179,57 +179,63 @@ app.post('/api/v1/admission/international-payment', upload.single('receipt'), (r
     return res.status(400).json({ error: 'Missing required fields or receipt image' });
   }
 
-  // Double entry: Save to admissions AND payment_logs as Pending
-  db.serialize(() => {
-    db.run(`INSERT INTO admissions (full_name, email, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?)`, 
-      [fullName, email, transaction_id, payment_source, amount, currency]);
-    
-    db.run(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status, receipt_image_url) VALUES (?, ?, ?, ?, ?, ?)`, 
-      [transaction_id, amount, currency, payment_source, 'Pending', receipt_image_url], function(err) {
-        if (err) {
-          if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(409).json({ error: 'Reference Number/TID already exists' });
-          }
-          return res.status(500).json({ error: 'Database error' });
-        }
-        res.status(201).json({ status: 'Submitted for Approval', id: this.lastID });
-      });
-  });
+  try {
+    const insertAdmission = db.prepare(`INSERT INTO admissions (full_name, email, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?)`);
+    const insertPayment = db.prepare(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status, receipt_image_url) VALUES (?, ?, ?, ?, ?, ?)`);
+
+    const transaction = db.transaction(() => {
+      insertAdmission.run(fullName, email, transaction_id, payment_source, amount, currency);
+      return insertPayment.run(transaction_id, amount, currency, payment_source, 'Pending', receipt_image_url);
+    });
+
+    const info = transaction();
+    res.status(201).json({ status: 'Submitted for Approval', id: info.lastInsertRowid });
+  } catch (err) {
+    if (err.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'Reference Number/TID already exists' });
+    }
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Admin: Get All Admission Status (Joined)
 app.get('/api/v1/admin/admissions-status', (req, res) => {
-  const query = `
-    SELECT 
-      a.*, 
-      p.status as payment_status, 
-      p.payment_source as verified_source,
-      p.receipt_image_url
-    FROM admissions a
-    LEFT JOIN payment_logs p ON a.transaction_id = p.transaction_id
-    ORDER BY a.timestamp DESC
-  `;
-  db.all(query, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
+  try {
+    const rows = db.prepare(`
+      SELECT 
+        a.*, 
+        p.status as payment_status, 
+        p.payment_source as verified_source,
+        p.receipt_image_url
+      FROM admissions a
+      LEFT JOIN payment_logs p ON a.transaction_id = p.transaction_id
+      ORDER BY a.timestamp DESC
+    `).all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Admin: Get Pending Approvals (For international receipts)
 app.get('/api/v1/admin/approvals', (req, res) => {
-  db.all(`SELECT * FROM payment_logs WHERE status = 'Pending'`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
+  try {
+    const rows = db.prepare(`SELECT * FROM payment_logs WHERE status = 'Pending'`).all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Admin: Approve Payment
 app.post('/api/v1/admin/approve', (req, res) => {
   const { id } = req.body; // payment_logs id
-  db.run(`UPDATE payment_logs SET status = 'Verified' WHERE id = ?`, [id], function(err) {
-    if (err) return res.status(500).json({ error: 'Database error' });
+  try {
+    db.prepare(`UPDATE payment_logs SET status = 'Verified' WHERE id = ?`).run(id);
     res.json({ status: 'Verified' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Serve index.html for any other routes (SPA)
