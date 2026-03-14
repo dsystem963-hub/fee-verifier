@@ -163,8 +163,12 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
   } else {
-    console.warn('Failed to parse SMS:', message_body);
-    res.status(422).json({ error: 'Failed to parse required fields', raw: message_body });
+    // If it reached this far, the connection is FINE, but it's not a bank message
+    console.warn('Connection Successful but Parsing Failed:', message_body);
+    res.status(200).json({ 
+      status: 'Connected', 
+      details: 'Website reached successfully! This message is not a bank payment, so no verification was done.' 
+    });
   }
 });
 
