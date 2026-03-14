@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle, AlertCircle, Loader2, Upload, Globe, User, GraduationCap, DollarSign, LayoutDashboard } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api/v1';
+const API_BASE = '/api/v1';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -93,7 +93,8 @@ function App() {
         setTid('');
         setReceipt(null);
       } catch (err) {
-        setMessage('Error submitting payment evidence.');
+        const errorMsg = err.response?.data?.error || 'Error submitting payment evidence.';
+        setMessage(errorMsg);
       }
     } else {
       try {
@@ -108,7 +109,8 @@ function App() {
         setMessage('Success! Your admission form has been submitted. We are matching your payment in the background.');
         setTid('');
       } catch (err) {
-        setMessage('Error submitting admission form.');
+        const errorMsg = err.response?.data?.error || 'Error submitting admission form.';
+        setMessage(errorMsg);
       }
     }
   };
