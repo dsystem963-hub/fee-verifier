@@ -67,17 +67,14 @@ const upload = multer({ storage });
 
 // Security Middleware
 const authenticateGateway = (req, res, next) => {
-  const secretKey = req.headers['x-gateway-secret'];
+  // Check headers, query params, or body for the secret
+  const secretKey = req.headers['x-gateway-secret'] || req.query.secret || req.body.secret;
   const expectedKey = process.env.GATEWAY_SECRET_KEY;
-  
-  // LOG ALL HEADERS FOR DEBUGGING
-  console.log('--- Auth Headers Received ---');
-  console.log(JSON.stringify(req.headers, null, 2));
   
   if (secretKey === expectedKey && expectedKey) {
     next();
   } else {
-    console.error(`Auth Failed: Sent [${secretKey}], Expected [${expectedKey}]`);
+    console.error(`Auth Failed: Expected [${expectedKey}], but received nothing or mismatch.`);
     res.status(401).json({ error: 'Unauthorized: Invalid Gateway Secret Key' });
   }
 };
