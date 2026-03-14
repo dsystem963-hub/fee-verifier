@@ -70,6 +70,10 @@ const authenticateGateway = (req, res, next) => {
   const secretKey = req.headers['x-gateway-secret'];
   const expectedKey = process.env.GATEWAY_SECRET_KEY;
   
+  // LOG ALL HEADERS FOR DEBUGGING
+  console.log('--- Auth Headers Received ---');
+  console.log(JSON.stringify(req.headers, null, 2));
+  
   if (secretKey === expectedKey && expectedKey) {
     next();
   } else {
