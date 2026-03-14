@@ -77,6 +77,10 @@ const authenticateGateway = (req, res, next) => {
 
 // --- Task 2: Local SMS Parsing Engine ---
 app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
+  console.log('--- SMS Gateway Request Received ---');
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+
   const { message_body, sender } = req.body;
   
   if (!message_body) {
@@ -113,25 +117,28 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   }
   // Banks (Meezan/Commercial)
   else {
-    const tidMatch = message_body.match(/(?:Ref No|TRX ID):?\s?(\d+)/i);
-    const amountMatch = message_body.match(/(?:PKR|Rs\.?)\s?([\d,.]+)/i);
+    const tidMatch = message_body.match(/(?:Ref No|TRX ID|TID|Reference):?\s?([A-Z0-9]+)/i);
+    const amountMatch = message_body.match(/(?:PKR|Rs\.?|Amount:?)\s?([\d,.]+)/i);
     transaction_id = tidMatch ? tidMatch[1] : null;
     amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = 'Bank';
+    payment_source = 'Bank/Other';
   }
 
   if (transaction_id && amount) {
     try {
       const stmt = db.prepare(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`);
       stmt.run(transaction_id, amount, 'PKR', payment_source, 'Verified');
+      console.log(`Successfully verified TID: ${transaction_id}`);
       res.status(200).json({ status: 'Parsed & Saved', transaction_id, amount });
     } catch (err) {
+      console.error('Database Error during SMS parsing:', err.message);
       if (err.message.includes('UNIQUE constraint failed')) {
         return res.status(409).json({ error: 'Transaction already exists' });
       }
       return res.status(500).json({ error: 'Database error' });
     }
   } else {
+    console.warn('Failed to parse SMS:', message_body);
     res.status(422).json({ error: 'Failed to parse required fields', raw: message_body });
   }
 });
