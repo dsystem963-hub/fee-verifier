@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 5000;
 const distPath = path.join(__dirname, '../client/dist');
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(distPath));
 
@@ -85,12 +86,12 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   console.log('Headers:', JSON.stringify(req.headers, null, 2));
   console.log('Body:', JSON.stringify(req.body, null, 2));
 
-  // Flexible field mapping to support different apps
-  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg;
-  const sender = req.body.sender || req.body.from || req.body.phone;
+  // Flexible field mapping to support different apps (Body OR Query)
+  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg || req.query.message_body || req.query.body || req.query.text;
+  const sender = req.body.sender || req.body.from || req.body.phone || req.query.sender || req.query.from;
   
   if (!message_body) {
-    console.warn('Payload rejected: message_body is empty. Received:', JSON.stringify(req.body));
+    console.warn('Payload rejected: message_body is empty. Received Body:', JSON.stringify(req.body), 'Received Query:', JSON.stringify(req.query));
     return res.status(400).json({ error: 'Message body is required' });
   }
 
