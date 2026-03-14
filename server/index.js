@@ -19,6 +19,35 @@ app.use(express.static(path.join(__dirname, '../client/dist')));
 const dbPath = path.resolve(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
 
+// Initialize Tables
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS payment_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id TEXT UNIQUE,
+      amount REAL,
+      currency TEXT,
+      payment_source TEXT,
+      status TEXT,
+      receipt_image_url TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT,
+      email TEXT,
+      transaction_id TEXT,
+      source TEXT,
+      amount REAL,
+      currency TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+});
+
 // Multer setup for receipt uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
