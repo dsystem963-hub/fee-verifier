@@ -10,10 +10,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const distPath = path.join(__dirname, '../client/dist');
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.static(distPath));
+
+console.log('Serving static files from:', distPath);
+if (!fs.existsSync(distPath)) {
+  console.warn('Warning: client/dist directory NOT found!');
+}
 
 // Database setup
 const dbPath = path.resolve(__dirname, 'database.sqlite');
@@ -227,9 +233,9 @@ app.post('/api/v1/admin/approve', (req, res) => {
 });
 
 // Serve index.html for any other routes (SPA)
-// Serve index.html for any other routes (SPA) - Express 5 compatible fallback
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+// Serve index.html for any other routes (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => {

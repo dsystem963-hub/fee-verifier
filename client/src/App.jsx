@@ -200,68 +200,101 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-center relative">
-          <GraduationCap className="mx-auto mb-4 opacity-30" size={60} />
-          <h2 className="text-3xl font-bold mb-2">Student Admission Form</h2>
-          <p className="text-blue-100 opacity-80">Global Education Portal 2026</p>
-          <button onClick={() => setIsAdmin(true)} className="absolute top-4 right-4 text-xs bg-black/20 px-2 py-1 rounded">Admin</button>
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 flex items-center justify-center p-4 font-sans selection:bg-blue-500/30">
+      {/* Background Glow */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
+      <div className="w-full max-w-2xl bg-slate-900/40 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] border border-slate-700/50 overflow-hidden relative z-10 transition-all duration-500 hover:shadow-blue-500/10">
+        <div className="bg-gradient-to-br from-blue-600/20 via-indigo-600/10 to-transparent p-10 text-center relative border-b border-slate-700/30">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+          <GraduationCap className="mx-auto mb-6 text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" size={70} />
+          <h2 className="text-4xl font-black mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-slate-400">
+            Student Admission
+          </h2>
+          <p className="text-lg text-slate-400 font-medium tracking-wide">Global Education Portal 2026</p>
+          <button 
+            onClick={() => setIsAdmin(true)} 
+            className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400"
+          >
+            Admin Portal
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-700">
-            <div className="flex items-center gap-3">
-              <Globe className={isInternational ? "text-blue-400" : "text-slate-500"} />
+        <form onSubmit={handleSubmit} className="p-10 space-y-8">
+          {/* Toggle Section */}
+          <div className="flex items-center justify-between p-6 bg-slate-950/40 rounded-2xl border border-slate-800/50 group transition-all duration-300 hover:border-blue-500/30">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl transition-colors duration-500 ${isInternational ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+                <Globe size={24} />
+              </div>
               <div>
-                <p className="font-semibold">{isInternational ? 'International Student' : 'Domestic Student'}</p>
-                <p className="text-xs text-slate-500">{isInternational ? 'Payment via Wise, WU, Remitly' : 'Payment via EasyPaisa, JazzCash, Banks'}</p>
+                <p className="font-bold text-lg text-slate-100">{isInternational ? 'International Admission' : 'Domestic Admission'}</p>
+                <p className="text-xs text-slate-500 font-medium">{isInternational ? 'Wise • WU • Remitly • Payoneer' : 'EasyPaisa • JazzCash • Bank Transfer'}</p>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer scale-110">
               <input type="checkbox" checked={isInternational} onChange={(e) => {
                 setIsInternational(e.target.checked);
                 setTid('');
                 setVerificationStatus('idle');
                 setFormData({ ...formData, source: '', amount: '' });
               }} className="sr-only peer" />
-              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 after:shadow-lg peer-checked:after:bg-white"></div>
             </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                <User size={16} /> Full Name
+          {/* Dual Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                <User size={14} /> Full Name
               </label>
-              <input type="text" required placeholder="John Doe" className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+              <input 
+                type="text" 
+                required 
+                placeholder="e.g. John Doe" 
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
+                value={formData.fullName} 
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} 
+              />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                <AlertCircle size={16} /> Email Address
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                <AlertCircle size={14} /> Email Address
               </label>
-              <input type="email" required placeholder="john@example.com" className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <input 
+                type="email" 
+                required 
+                placeholder="john@example.com" 
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
+                value={formData.email} 
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+              />
             </div>
           </div>
 
-          <div className="space-y-4 border-t border-slate-700 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-400">Payment Source</label>
+          {/* Payment Details */}
+          <div className="space-y-6 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="group space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Payment Source</label>
                 {!isInternational ? (
-                  <select required className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500 capitalize" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}>
+                  <select required className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}>
                     <option value="">Select Platform / Bank</option>
                     <option value="EasyPaisa">EasyPaisa</option>
                     <option value="JazzCash">JazzCash</option>
                     <option value="SadaPay">SadaPay</option>
                     <option value="NayaPay">NayaPay</option>
-                    <optgroup label="Banks in Pakistan">
+                    <optgroup label="Pakistani Banks">
                       {pakBanks.map(bank => <option key={bank} value={bank}>{bank}</option>)}
                     </optgroup>
                   </select>
                 ) : (
-                  <select required className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}>
-                    <option value="">Select Option</option>
+                  <select required className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 appearance-none cursor-pointer" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}>
+                    <option value="">Select Gateway</option>
                     <option value="Wise">Wise</option>
                     <option value="Remitly">Remitly</option>
                     <option value="Western Union">Western Union</option>
@@ -269,71 +302,110 @@ function App() {
                   </select>
                 )}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-400">Amount Paid</label>
-                <div className="flex gap-2">
-                  <input type="number" required placeholder="5000" className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-3 outline-none focus:border-blue-500" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} />
-                  {isInternational && (
-                    <select className="bg-slate-900 border border-slate-700 rounded-lg p-3" value={formData.currency} onChange={(e) => setFormData({ ...formData, currency: e.target.value })}>
+              <div className="group space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount Paid</label>
+                <div className="flex gap-3">
+                  <input 
+                    type="number" 
+                    required 
+                    placeholder="5000" 
+                    className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all" 
+                    value={formData.amount} 
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })} 
+                  />
+                  {isInternational ? (
+                    <select className="bg-slate-900 border border-slate-800 rounded-xl px-4 font-bold text-blue-400" value={formData.currency} onChange={(e) => setFormData({ ...formData, currency: e.target.value })}>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
                       <option value="PKR">PKR</option>
                     </select>
+                  ) : (
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 flex items-center justify-center font-bold text-slate-500">PKR</div>
                   )}
-                  {!isInternational && <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-500 px-4">PKR</div>}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                <DollarSign size={16} /> {isInternational ? 'Reference Number / MTCN' : 'Transaction ID (TID)'}
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400">
+                <DollarSign size={14} /> {isInternational ? 'Ref Code / MTCN' : 'Transaction ID (TID)'}
               </label>
               <div className="relative">
-                <input type="text" required placeholder={isInternational ? "Enter MTCN or Ref Code" : "Enter 11-digit TID"} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 pr-12 outline-none focus:border-blue-500" value={tid} onChange={handleTidChange} />
-                <div className="absolute right-3 top-3">
-                  {verificationStatus === 'loading' && <Loader2 className="animate-spin text-blue-500" size={20} />}
-                  {verificationStatus === 'verified' && <CheckCircle className="text-green-500" size={20} />}
-                  {verificationStatus === 'pending' && <AlertCircle className="text-yellow-500" size={20} />}
+                <input 
+                  type="text" 
+                  required 
+                  placeholder={isInternational ? "Enter Alpha-Numeric Reference" : "Enter 11-Digit Transaction ID"} 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 pr-14 outline-none focus:border-blue-500/50 transition-all font-mono tracking-wider" 
+                  value={tid} 
+                  onChange={handleTidChange} 
+                />
+                <div className="absolute right-4 top-4">
+                  {verificationStatus === 'loading' && <Loader2 className="animate-spin text-blue-500" size={24} />}
+                  {verificationStatus === 'verified' && <div className="p-1 bg-green-500/20 rounded-full animate-in zoom-in"><CheckCircle className="text-green-500" size={20} /></div>}
+                  {verificationStatus === 'pending' && <div className="p-1 bg-yellow-500/20 rounded-full"><AlertCircle className="text-yellow-500" size={20} /></div>}
                   {verificationStatus === 'error' && <AlertCircle className="text-red-500" size={20} />}
                 </div>
               </div>
               
               {!isInternational && verificationStatus === 'pending' && (
-                <p className="text-xs text-yellow-500 mt-1">Status: Matching with SMS gateway bank records... You can submit now.</p>
+                <div className="flex items-start gap-2 text-[11px] text-yellow-500/80 bg-yellow-500/5 p-3 rounded-lg border border-yellow-500/20">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                  <p>Matching with bank records... You can proceed with submission now. Verification will continue in the background.</p>
+                </div>
               )}
               {!isInternational && verificationStatus === 'verified' && (
-                <p className="text-xs text-green-500 mt-1 font-semibold">Payment Successfully Verified! Source: {formData.source}</p>
+                <div className="flex items-center gap-2 text-[11px] text-green-400 bg-green-500/5 p-3 rounded-lg border border-green-500/20">
+                  <CheckCircle size={14} />
+                  <p className="font-semibold">Automatic verification successful! Source: {formData.source}</p>
+                </div>
               )}
             </div>
 
             {isInternational && (
-              <div className="col-span-full space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                  <Upload size={16} /> Digital Receipt / Evidence
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Upload size={14} /> Receipt Evidence
                 </label>
-                <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-blue-500 transition cursor-pointer relative">
+                <div className="border-2 border-dashed border-slate-800 rounded-2xl p-10 text-center hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group/upload relative cursor-pointer">
                   <input type="file" required={isInternational} className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setReceipt(e.target.files[0])} />
-                  <Upload className="mx-auto text-slate-500 mb-2" />
-                  <p className="text-sm text-slate-400">{receipt ? receipt.name : 'Upload Screenshot or PDF'}</p>
+                  <div className="space-y-3">
+                    <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center mx-auto group-hover/upload:scale-110 transition-transform">
+                      <Upload className="text-slate-500 group-hover/upload:text-blue-400" size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-300">{receipt ? receipt.name : 'Upload Payment Screenshot'}</p>
+                      <p className="text-xs text-slate-500">Max size 5MB • JPG, PNG or PDF</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
           {message && (
-            <div className={`p-4 rounded-lg flex items-center gap-3 ${message.includes('Success') ? 'bg-green-500/10 text-green-400 border border-green-500/50' : 'bg-red-500/10 text-red-400 border border-red-500/50'}`}>
-              <CheckCircle size={20} /> {message}
+            <div className={`p-5 rounded-2xl flex items-center gap-4 animate-in slide-in-from-bottom-2 duration-300 ${message.includes('Success') ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+              <div className={`p-2 rounded-full ${message.includes('Success') ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                {message.includes('Success') ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+              </div>
+              <p className="font-bold text-sm tracking-wide">{message}</p>
             </div>
           )}
 
-          <button type="submit" className="w-full py-4 rounded-xl font-bold text-lg transition shadow-lg bg-blue-600 hover:bg-blue-500 text-white">
-            Submit Admission Form
+          <button 
+            type="submit" 
+            className="w-full relative group overflow-hidden py-5 rounded-2xl font-black text-xl tracking-widest uppercase transition-all shadow-[0_0_30px_-5px_transparent] hover:shadow-blue-500/40"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 transition-transform group-hover:scale-105 duration-500"></div>
+            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_3s_infinite] pointer-events-none"></div>
+            <span className="relative z-10 text-white flex items-center justify-center gap-3">
+              Complete Admission <CheckCircle size={24} />
+            </span>
           </button>
         </form>
       </div>
     </div>
   );
+
 }
 
 export default App;

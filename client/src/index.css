@@ -31,3 +31,14 @@ body {
 #root {
   width: 100%;
 }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@layer base {
+  body {
+    @apply bg-[#0f172a];
+  }
+}
