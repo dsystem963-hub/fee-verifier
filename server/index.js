@@ -85,9 +85,12 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, (req, res) => {
   console.log('Headers:', JSON.stringify(req.headers, null, 2));
   console.log('Body:', JSON.stringify(req.body, null, 2));
 
-  const { message_body, sender } = req.body;
+  // Flexible field mapping to support different apps
+  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg;
+  const sender = req.body.sender || req.body.from || req.body.phone;
   
   if (!message_body) {
+    console.warn('Payload rejected: message_body is empty. Received:', JSON.stringify(req.body));
     return res.status(400).json({ error: 'Message body is required' });
   }
 
