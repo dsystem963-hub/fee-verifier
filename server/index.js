@@ -232,6 +232,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
   console.log('Data:', { fullName, email, tid, amount });
 
   try {
+    console.log('Step 1: Inserting into admissions table...');
     const { error: admError } = await supabase
       .from('admissions')
       .insert([{
@@ -247,21 +248,34 @@ app.post('/api/v1/admission/submit', async (req, res) => {
         timestamp: new Date().toISOString()
       }]);
 
-    if (admError) throw admError;
+    if (admError) {
+      console.error('Step 1 FAILED:', admError);
+      throw admError;
+    }
+    console.log('Step 1 SUCCESS');
 
-    const { data: log } = await supabase
+    console.log('Step 2: Checking payment_logs...');
+    const { data: log, error: logFetchError } = await supabase
       .from('payment_logs')
       .select('status')
       .eq('transaction_id', tid)
       .maybeSingle();
 
+    if (logFetchError) {
+      console.error('Step 2 FAILED:', logFetchError);
+      throw logFetchError;
+    }
+    console.log('Step 2 SUCCESS. Log found:', !!log);
+
     if (log && log.status === 'verified') {
+      console.log('Step 3: Sending verification email...');
       await sendVerificationEmail(email, fullName, tid);
+      console.log('Step 3 SUCCESS');
     }
 
     res.status(201).json({ 
       status: 'Submitted', 
-      paymentStatus: (log && log.status === 'verified') ? 'Verified' : 'Pending' 
+      paymentStatus: (log && (log.status === 'verified' || log.status === 'Verified')) ? 'Verified' : 'Pending' 
     });
   } catch (err) {
     console.error('--- CRITICAL SUBMISSION ERROR ---');
