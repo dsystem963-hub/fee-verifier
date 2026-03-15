@@ -93,23 +93,24 @@ app.get('/health', async (req, res) => {
       const { data, error: readError } = await supabase.from('admissions').select('count', { count: 'exact', head: true });
       if (!readError) dbConnection = true;
 
-      // 2. Test Write (to a separate temporary entry)
-      const testId = '00000000-0000-0000-0000-000000000000';
-      const { error: insertError } = await supabase.from('admissions').upsert([{ 
-        id: testId, 
-        full_name: 'HEALTH_CHECK_TEST', 
-        email: 'test@test.com' 
-      }]);
+      // 2. Test Realistic Write (No ID provided, relies on DB default)
+      const { data: insertedData, error: insertError } = await supabase.from('admissions').insert([{ 
+        full_name: 'HEALTH_CHECK_TEST_' + Date.now(), 
+        email: 'test@healthcheck.com' 
+      }]).select();
       
       if (!insertError) {
         writeTest = true;
-        await supabase.from('admissions').delete().eq('id', testId);
+        // Cleanup
+        if (insertedData && insertedData[0]) {
+          await supabase.from('admissions').delete().eq('id', insertedData[0].id);
+        }
       } else {
         writeError = insertError;
       }
     }
   } catch (e) {
-    writeError = e.message;
+    writeError = { message: e.message, stack: e.stack };
   }
 
   res.json({ 
@@ -227,19 +228,21 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 // Submit Student Admission (Immediate)
 app.post('/api/v1/admission/submit', async (req, res) => {
   const { fullName, email, mobileNumber, cnic, course, tid, source, amount, currency } = req.body;
+  console.log('--- Submission Received ---');
+  console.log('Data:', { fullName, email, tid, amount });
 
   try {
     const { error: admError } = await supabase
       .from('admissions')
       .insert([{
-        full_name: fullName,
-        email,
+        full_name: fullName || 'Unknown',
+        email: email || 'No Email',
         mobile_number: mobileNumber,
         cnic,
         course,
         transaction_id: tid,
         source,
-        amount,
+        amount: amount ? parseFloat(amount) : 0,
         currency: currency || 'PKR',
         timestamp: new Date().toISOString()
       }]);
