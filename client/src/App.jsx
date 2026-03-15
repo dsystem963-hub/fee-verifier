@@ -12,6 +12,8 @@ function App() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    mobileNumber: '',
+    cnic: '',
     course: '',
     amount: '',
     currency: 'PKR',
@@ -29,6 +31,22 @@ function App() {
     }
   }, [isAdmin]);
 
+  const resetForm = () => {
+    setFormData({
+      fullName: '',
+      email: '',
+      mobileNumber: '',
+      cnic: '',
+      course: '',
+      amount: '',
+      currency: 'PKR',
+      source: '',
+    });
+    setTid('');
+    setReceipt(null);
+    setVerificationStatus('idle');
+  };
+
   const fetchAdmissionsStatus = async () => {
     try {
       const res = await axios.get(`${API_BASE}/admin/admissions-status`);
@@ -37,6 +55,12 @@ function App() {
       console.error(err);
     }
   };
+
+  const courses = [
+    "Computer Science", "Information Technology", "Business Administration", 
+    "Software Engineering", "Artificial Intelligence", "Cyber Security",
+    "Data Science", "Digital Marketing", "Fashion Design", "Graphic Design"
+  ];
 
   const pakBanks = [
     "Habib Bank Limited (HBL)", "United Bank Limited (UBL)", "National Bank of Pakistan (NBP)",
@@ -57,7 +81,7 @@ function App() {
         setVerificationStatus('verified');
         setFormData({ ...formData, amount: res.data.data.amount, source: res.data.data.payment_source });
       } else {
-        setVerificationStatus('pending');
+        setVerificationStatus('idle'); // Just go back to idle if not found yet
       }
     } catch (err) {
       setVerificationStatus('error');
@@ -81,6 +105,9 @@ function App() {
       const data = new FormData();
       data.append('fullName', formData.fullName);
       data.append('email', formData.email);
+      data.append('mobileNumber', formData.mobileNumber);
+      data.append('cnic', formData.cnic);
+      data.append('course', formData.course);
       data.append('transaction_id', tid);
       data.append('amount', formData.amount);
       data.append('currency', formData.currency);
@@ -90,8 +117,7 @@ function App() {
       try {
         await axios.post(`${API_BASE}/admission/international-payment`, data);
         setMessage('Success! Your international payment evidence has been submitted for manual approval.');
-        setTid('');
-        setReceipt(null);
+        resetForm();
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting payment evidence.';
         setMessage(errorMsg);
@@ -101,13 +127,16 @@ function App() {
         await axios.post(`${API_BASE}/admission/submit`, {
           fullName: formData.fullName,
           email: formData.email,
+          mobileNumber: formData.mobileNumber,
+          cnic: formData.cnic,
+          course: formData.course,
           tid,
           source: formData.source,
           amount: formData.amount,
           currency: 'PKR'
         });
-        setMessage('Success! Your admission form has been submitted. We are matching your payment in the background.');
-        setTid('');
+        setMessage('Success! Your admission form has been submitted. We are verifying your payment, Once your payment is verified, you will be notified through Email.');
+        resetForm();
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting admission form.';
         setMessage(errorMsg);
@@ -115,15 +144,10 @@ function App() {
     }
   };
 
-  const approvePayment = async (tid) => {
-    // Need to find the payment log ID for this TID
+  const approvePayment = async (logId) => {
     try {
-      const res = await axios.get(`${API_BASE}/admin/approvals`);
-      const payment = res.data.find(p => p.transaction_id === tid);
-      if (payment) {
-        await axios.post(`${API_BASE}/admin/approve`, { id: payment.id });
-        fetchAdmissionsStatus();
-      }
+      await axios.post(`${API_BASE}/admin/approve`, { id: logId });
+      fetchAdmissionsStatus();
     } catch (err) {
       console.error(err);
     }
@@ -158,60 +182,69 @@ function App() {
           </header>
 
           <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-900/50 border-b border-slate-700">
-                  <th className="p-4 font-semibold text-slate-400">Student Name</th>
-                  <th className="p-4 font-semibold text-slate-400">Email</th>
-                  <th className="p-4 font-semibold text-slate-400">TID / Ref</th>
-                  <th className="p-4 font-semibold text-slate-400">Amount</th>
-                  <th className="p-4 font-semibold text-slate-400">Source</th>
-                  <th className="p-4 font-semibold text-slate-400">Verification Status</th>
-                  <th className="p-4 font-semibold text-slate-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {admissions.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
-                    <td className="p-4 font-medium">{row.full_name}</td>
-                    <td className="p-4 text-slate-400">{row.email}</td>
-                    <td className="p-4 font-mono text-sm">{row.transaction_id}</td>
-                    <td className="p-4">{row.amount} {row.currency}</td>
-                    <td className="p-4 text-sm capitalize">{row.source}</td>
-                    <td className="p-4">
-                      {row.payment_status === 'Verified' ? (
-                        <span className="flex items-center gap-1 text-green-500 font-semibold px-2 py-1 bg-green-500/10 rounded-full w-fit text-xs">
-                          <CheckCircle size={14} /> Verified
-                        </span>
-                      ) : row.payment_status === 'Pending' ? (
-                        <span className="flex items-center gap-1 text-yellow-500 font-semibold px-2 py-1 bg-yellow-500/10 rounded-full w-fit text-xs">
-                          <AlertCircle size={14} /> Pending Approval
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-slate-500 font-semibold px-2 py-1 bg-slate-500/10 rounded-full w-fit text-xs">
-                          <Loader2 size={14} className="animate-spin" /> Matching...
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 flex flex-wrap gap-2">
-                      {row.payment_status === 'Pending' && (
-                        <button onClick={() => approvePayment(row.transaction_id)} className="text-[10px] bg-blue-600 hover:bg-blue-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all duration-300">
-                          Approve Payment
-                        </button>
-                      )}
-                      {!row.payment_status && (
-                        <button onClick={() => forceMatch(row)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all duration-300">
-                          Verify Manually
-                        </button>
-                      )}
-                      {row.receipt_image_url && (
-                        <a href={row.receipt_image_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 hover:bg-blue-600 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-300 hover:text-white">View Receipt</a>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-900/50 border-b border-slate-700">
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Student Name</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Contact</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">CNIC</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Course</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">TID / Ref</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Amount</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
+                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {admissions.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
+                      <td className="p-4 font-medium">{row.full_name}</td>
+                      <td className="p-4 text-xs">
+                        <div className="text-slate-200">{row.email}</div>
+                        <div className="text-slate-400">{row.mobile_number}</div>
+                      </td>
+                      <td className="p-4 text-sm text-slate-300">{row.cnic}</td>
+                      <td className="p-4 text-sm text-slate-300">{row.course}</td>
+                      <td className="p-4 font-mono text-sm">{row.transaction_id}</td>
+                      <td className="p-4 font-bold">{row.amount} {row.currency}</td>
+                      <td className="p-4">
+                        {row.payment_status === 'Verified' ? (
+                          <span className="flex items-center gap-1 text-green-500 font-semibold px-2 py-1 bg-green-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
+                            <CheckCircle size={10} /> Verified
+                          </span>
+                        ) : row.payment_status === 'Pending' ? (
+                          <span className="flex items-center gap-1 text-yellow-500 font-semibold px-2 py-1 bg-yellow-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
+                            <AlertCircle size={10} /> Pending Approval
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-slate-500 font-semibold px-2 py-1 bg-slate-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
+                            <Loader2 size={10} className="animate-spin" /> Matching...
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          {row.payment_status === 'Pending' && (
+                            <button onClick={() => approvePayment(row.log_id)} className="text-[10px] bg-blue-600 hover:bg-blue-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all">
+                              Approve
+                            </button>
+                          )}
+                          {!row.payment_status && (
+                            <button onClick={() => forceMatch(row)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all">
+                              Verify
+                            </button>
+                          )}
+                          {row.receipt_image_url && (
+                            <a href={row.receipt_image_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 hover:bg-blue-600 px-3 py-1.5 rounded-full transition-all text-slate-300">Receipt</a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {admissions.length === 0 && (
               <p className="p-20 text-center text-slate-500 italic">No admission requests yet.</p>
             )}
@@ -223,13 +256,12 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 flex items-center justify-center p-4 font-sans selection:bg-blue-500/30">
-      {/* Background Glow */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="w-full max-w-2xl bg-slate-900/40 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] border border-slate-700/50 overflow-hidden relative z-10 transition-all duration-500 hover:shadow-blue-500/10">
+      <div className="w-full max-w-3xl bg-slate-900/40 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] border border-slate-700/50 overflow-hidden relative z-10 transition-all duration-500 hover:shadow-blue-500/10">
         <div className="bg-gradient-to-br from-blue-600/20 via-indigo-600/10 to-transparent p-10 text-center relative border-b border-slate-700/30">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
           <GraduationCap className="mx-auto mb-6 text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" size={70} />
@@ -237,16 +269,12 @@ function App() {
             Student Admission
           </h2>
           <p className="text-lg text-slate-400 font-medium tracking-wide">Global Education Portal 2026</p>
-          <button 
-            onClick={() => setIsAdmin(true)} 
-            className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400"
-          >
+          <button onClick={() => setIsAdmin(true)} className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400">
             Admin Portal
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-10 space-y-8">
-          {/* Toggle Section */}
           <div className="flex items-center justify-between p-6 bg-slate-950/40 rounded-2xl border border-slate-800/50 group transition-all duration-300 hover:border-blue-500/30">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-xl transition-colors duration-500 ${isInternational ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
@@ -260,46 +288,48 @@ function App() {
             <label className="relative inline-flex items-center cursor-pointer scale-110">
               <input type="checkbox" checked={isInternational} onChange={(e) => {
                 setIsInternational(e.target.checked);
-                setTid('');
-                setVerificationStatus('idle');
-                setFormData({ ...formData, source: '', amount: '' });
+                resetForm();
               }} className="sr-only peer" />
-              <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 after:shadow-lg peer-checked:after:bg-white"></div>
+              <div className="w-14 h-7 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
             </label>
           </div>
 
-          {/* Dual Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="group space-y-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
                 <User size={14} /> Full Name
               </label>
-              <input 
-                type="text" 
-                required 
-                placeholder="e.g. John Doe" 
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
-                value={formData.fullName} 
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} 
-              />
+              <input type="text" required placeholder="e.g. John Doe" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
             </div>
             <div className="group space-y-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
                 <AlertCircle size={14} /> Email Address
               </label>
-              <input 
-                type="email" 
-                required 
-                placeholder="john@example.com" 
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
-                value={formData.email} 
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-              />
+              <input type="email" required placeholder="john@example.com" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+            </div>
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                <User size={14} /> Mobile Number
+              </label>
+              <input type="tel" required placeholder="e.g. 03001234567" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" value={formData.mobileNumber} onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })} />
+            </div>
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                <User size={14} /> CNIC Number
+              </label>
+              <input type="text" required placeholder="e.g. 42101-1234567-1" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" value={formData.cnic} onChange={(e) => setFormData({ ...formData, cnic: e.target.value })} />
             </div>
           </div>
 
-          {/* Payment Details */}
-          <div className="space-y-6 pt-4">
+          <div className="space-y-6">
+            <div className="group space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Admission Applied In</label>
+              <select required className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer" value={formData.course} onChange={(e) => setFormData({ ...formData, course: e.target.value })}>
+                <option value="">Select Course</option>
+                {courses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="group space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Payment Source</label>
@@ -325,21 +355,13 @@ function App() {
                 )}
               </div>
               <div className="group space-y-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount Paid</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Fee Paid</label>
                 <div className="flex gap-3">
-                  <input 
-                    type="number" 
-                    required 
-                    placeholder="5000" 
-                    className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all" 
-                    value={formData.amount} 
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })} 
-                  />
+                  <input type="number" required placeholder="5000" className="flex-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} />
                   {isInternational ? (
                     <select className="bg-slate-900 border border-slate-800 rounded-xl px-4 font-bold text-blue-400" value={formData.currency} onChange={(e) => setFormData({ ...formData, currency: e.target.value })}>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
-                      <option value="PKR">PKR</option>
                     </select>
                   ) : (
                     <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 flex items-center justify-center font-bold text-slate-500">PKR</div>
@@ -353,29 +375,14 @@ function App() {
                 <DollarSign size={14} /> {isInternational ? 'Ref Code / MTCN' : 'Transaction ID (TID)'}
               </label>
               <div className="relative">
-                <input 
-                  type="text" 
-                  required 
-                  placeholder={isInternational ? "Enter Alpha-Numeric Reference" : "Enter 11-Digit Transaction ID"} 
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 pr-14 outline-none focus:border-blue-500/50 transition-all font-mono tracking-wider" 
-                  value={tid} 
-                  onChange={handleTidChange} 
-                />
+                <input type="text" required placeholder={isInternational ? "Enter Alpha-Numeric Reference" : "Enter 11-Digit Transaction ID"} className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 pr-14 outline-none focus:border-blue-500/50 transition-all font-mono tracking-wider" value={tid} onChange={handleTidChange} />
                 <div className="absolute right-4 top-4">
                   {verificationStatus === 'loading' && <Loader2 className="animate-spin text-blue-500" size={24} />}
                   {verificationStatus === 'verified' && <div className="p-1 bg-green-500/20 rounded-full animate-in zoom-in"><CheckCircle className="text-green-500" size={20} /></div>}
-                  {verificationStatus === 'pending' && <div className="p-1 bg-yellow-500/20 rounded-full"><AlertCircle className="text-yellow-500" size={20} /></div>}
                   {verificationStatus === 'error' && <AlertCircle className="text-red-500" size={20} />}
                 </div>
               </div>
-              
-              {!isInternational && verificationStatus === 'pending' && (
-                <div className="flex items-start gap-2 text-[11px] text-yellow-500/80 bg-yellow-500/5 p-3 rounded-lg border border-yellow-500/20">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                  <p>Matching with bank records... You can proceed with submission now. Verification will continue in the background.</p>
-                </div>
-              )}
-              {!isInternational && verificationStatus === 'verified' && (
+              {verificationStatus === 'verified' && (
                 <div className="flex items-center gap-2 text-[11px] text-green-400 bg-green-500/5 p-3 rounded-lg border border-green-500/20">
                   <CheckCircle size={14} />
                   <p className="font-semibold">Automatic verification successful! Source: {formData.source}</p>
@@ -409,18 +416,14 @@ function App() {
               <div className={`p-2 rounded-full ${message.includes('Success') ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                 {message.includes('Success') ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
               </div>
-              <p className="font-bold text-sm tracking-wide">{message}</p>
+              <p className="font-bold text-sm tracking-wide leading-relaxed">{message}</p>
             </div>
           )}
 
-          <button 
-            type="submit" 
-            className="w-full relative group overflow-hidden py-5 rounded-2xl font-black text-xl tracking-widest uppercase transition-all shadow-[0_0_30px_-5px_transparent] hover:shadow-blue-500/40"
-          >
+          <button type="submit" className="w-full relative group overflow-hidden py-5 rounded-2xl font-black text-xl tracking-widest uppercase transition-all shadow-[0_0_30px_-5px_transparent] hover:shadow-blue-500/40">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 transition-transform group-hover:scale-105 duration-500"></div>
-            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_3s_infinite] pointer-events-none"></div>
             <span className="relative z-10 text-white flex items-center justify-center gap-3">
-              Complete Admission <CheckCircle size={24} />
+              Apply Admission <CheckCircle size={24} />
             </span>
           </button>
         </form>
