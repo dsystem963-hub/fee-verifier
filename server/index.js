@@ -228,11 +228,8 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 // Submit Student Admission (Immediate)
 app.post('/api/v1/admission/submit', async (req, res) => {
   const { fullName, email, mobileNumber, cnic, course, tid, source, amount, currency } = req.body;
-  console.log('--- Submission Received ---');
-  console.log('Data:', { fullName, email, tid, amount });
-
+  
   try {
-    console.log('Step 1: Inserting into admissions table...');
     const { error: admError } = await supabase
       .from('admissions')
       .insert([{
@@ -248,29 +245,16 @@ app.post('/api/v1/admission/submit', async (req, res) => {
         timestamp: new Date().toISOString()
       }]);
 
-    if (admError) {
-      console.error('Step 1 FAILED:', admError);
-      throw admError;
-    }
-    console.log('Step 1 SUCCESS');
+    if (admError) throw admError;
 
-    console.log('Step 2: Checking payment_logs...');
-    const { data: log, error: logFetchError } = await supabase
+    const { data: log } = await supabase
       .from('payment_logs')
       .select('status')
       .eq('transaction_id', tid)
       .maybeSingle();
 
-    if (logFetchError) {
-      console.error('Step 2 FAILED:', logFetchError);
-      throw logFetchError;
-    }
-    console.log('Step 2 SUCCESS. Log found:', !!log);
-
     if (log && (log.status === 'Verified' || log.status === 'verified')) {
-      console.log('Step 3: Sending verification email...');
       await sendVerificationEmail(email, fullName, tid);
-      console.log('Step 3 SUCCESS');
     }
 
     res.status(201).json({ 
@@ -278,16 +262,12 @@ app.post('/api/v1/admission/submit', async (req, res) => {
       paymentStatus: (log && (log.status === 'Verified' || log.status === 'verified')) ? 'Verified' : 'Pending' 
     });
   } catch (err) {
-    console.error('--- CRITICAL SUBMISSION ERROR ---');
-    console.error('Error Name:', err.name);
-    console.error('Error Message:', err.message);
-    console.error('Full Error:', JSON.stringify(err, null, 2));
-
+    console.error('Submission Error:', err.message);
     let msg = err.message || 'Unknown Error';
     if (msg.toLowerCase().includes('fetch failed')) {
-      msg = 'SUPABASE CONNECTION FAILURE: The server cannot reach your Supabase URL. This is usually a typo in the URL or a firewall issue.';
+      msg = 'SUPABASE CONNECTION FAILURE: Check your SUPABASE_URL in Render.';
     }
-    res.status(500).json({ error: msg, details: err });
+    res.status(500).json({ error: msg });
   }
 });
 
