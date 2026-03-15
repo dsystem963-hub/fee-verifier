@@ -177,11 +177,22 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   
   if (!message_body) return res.status(400).json({ error: 'No message body' });
 
+  // Log incoming SMS for debugging
+  try {
+    await supabase.from('sms_logs').insert([{ 
+      payload: req.body, 
+      message_body,
+      timestamp: new Date().toISOString() 
+    }]);
+  } catch (logErr) {
+    console.warn('SMS Logging failed (Check if table exists):', logErr.message);
+  }
+
   let tid = null;
   let amt = null;
   let source = 'SMS Gateway';
 
-  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|TID|Ref|Tid|IBFT|TxID)[:\s]*([a-z0-9]+)/i);
+  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|Raast\s+Tx\s+ID|IBFT\s+Tx\s+ID|Tx\s+ID|TID|Ref|Tid|IBFT|TxID)[:\s]*([a-z0-9]+)/i);
   const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
 
   if (tidMatch && amtMatch) {
