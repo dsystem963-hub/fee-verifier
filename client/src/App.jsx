@@ -16,12 +16,16 @@ function App() {
     mobileNumber: '',
     cnic: '',
     course: '',
+    courseDescription: '', // NEW
     amount: '',
     currency: 'PKR',
     source: '',
   });
   const [receipt, setReceipt] = useState(null);
   const [message, setMessage] = useState('');
+  const [showCourseOptions, setShowCourseOptions] = useState(false); // NEW
+  const [adminAuth, setAdminAuth] = useState(false); // NEW
+  const [adminPass, setAdminPass] = useState(''); // NEW
 
   // Admin state
   const [admissions, setAdmissions] = useState([]);
@@ -109,6 +113,7 @@ function App() {
       data.append('mobileNumber', formData.mobileNumber);
       data.append('cnic', formData.cnic);
       data.append('course', formData.course);
+      data.append('courseDescription', formData.courseDescription); // NEW
       data.append('transaction_id', tid);
       data.append('amount', formData.amount);
       data.append('currency', formData.currency);
@@ -131,6 +136,7 @@ function App() {
           mobileNumber: formData.mobileNumber,
           cnic: formData.cnic,
           course: formData.course,
+          courseDescription: formData.courseDescription, // NEW
           tid,
           source: formData.source,
           amount: formData.amount,
@@ -203,7 +209,7 @@ function App() {
         <div className="max-w-7xl mx-auto">
           <header className="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
             <h1 className="text-3xl font-bold flex items-center gap-2">
-              <LayoutDashboard className="text-blue-400" /> Admissions Overview
+              <LayoutDashboard className="text-blue-400" /> Admit<span className="text-blue-400">Pay</span> Dashboard
             </h1>
             <button onClick={() => setIsAdmin(false)} className="px-4 py-2 bg-slate-800 rounded hover:bg-slate-700 transition">
               Student View
@@ -353,10 +359,20 @@ function App() {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
           <GraduationCap className="mx-auto mb-6 text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" size={70} />
           <h2 className="text-4xl font-black mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-slate-400">
-            Student Admission
+            Admit<span className="text-blue-400">Pay</span> Admission
           </h2>
           <p className="text-lg text-slate-400 font-medium tracking-wide">Global Education Portal 2026</p>
-          <button onClick={() => setIsAdmin(true)} className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400">
+          <button 
+            onClick={() => {
+              const pass = prompt('Enter Admin Password:');
+              if (pass === 'admin786') {
+                setIsAdmin(true);
+              } else {
+                alert('Invalid Password');
+              }
+            }} 
+            className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400"
+          >
             Admin Portal
           </button>
         </div>
@@ -409,12 +425,54 @@ function App() {
           </div>
 
           <div className="space-y-6">
-            <div className="group space-y-3">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Admission Applied In</label>
-              <select required className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer" value={formData.course} onChange={(e) => setFormData({ ...formData, course: e.target.value })}>
-                <option value="">Select Course</option>
-                {courses.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="group space-y-3 relative">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                  <GraduationCap size={14} /> Admission Applied In
+                </label>
+                
+                {/* Custom Beautiful Dropdown */}
+                <div 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 cursor-pointer flex justify-between items-center hover:border-blue-500/30 transition-all text-slate-300"
+                  onClick={() => setShowCourseOptions(!showCourseOptions)}
+                >
+                  <span className={formData.course ? 'text-blue-400 font-bold' : 'text-slate-700'}>
+                    {formData.course || 'Select Course'}
+                  </span>
+                  <div className={`transition-transform duration-300 ${showCourseOptions ? 'rotate-180' : ''}`}>
+                    <AlertCircle size={14} className="text-slate-600" />
+                  </div>
+                </div>
+
+                {showCourseOptions && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    {courses.map(c => (
+                      <div 
+                        key={c} 
+                        className="p-4 hover:bg-blue-600/20 hover:text-blue-400 cursor-pointer transition-colors border-b border-slate-800/50 last:border-0 text-sm font-medium"
+                        onClick={() => {
+                          setFormData({ ...formData, course: c });
+                          setShowCourseOptions(false);
+                        }}
+                      >
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="group space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                   Course Description
+                </label>
+                <textarea 
+                  placeholder="e.g. Any additional details about your course or interest..." 
+                  className="w-full h-[58px] bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700 text-sm resize-none"
+                  value={formData.courseDescription} 
+                  onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

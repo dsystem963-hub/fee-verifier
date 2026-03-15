@@ -227,7 +227,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 
 // Submit Student Admission (Immediate)
 app.post('/api/v1/admission/submit', async (req, res) => {
-  const { fullName, email, mobileNumber, cnic, course, tid, source, amount, currency } = req.body;
+  const { fullName, email, mobileNumber, cnic, course, courseDescription, tid, source, amount, currency } = req.body;
   
   try {
     const { error: admError } = await supabase
@@ -238,6 +238,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
         mobile_number: mobileNumber,
         cnic,
         course,
+        course_description: courseDescription, // NEW
         transaction_id: tid,
         source,
         amount: amount ? parseFloat(amount) : 0,
