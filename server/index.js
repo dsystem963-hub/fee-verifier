@@ -190,19 +190,19 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   let amount = null;
   let payment_source = 'Unknown';
 
-  if (sender === '8558' || message_body.includes('EasyPaisa')) {
+  if (sender === '8558' || message_body.toLowerCase().includes('easypaisa')) {
     const tidMatch = message_body.match(/(?:TID|Trans ID)[:\s]*(\d+)/i);
     const amountMatch = message_body.match(/(?:Rs\.?|Amount)[:\s]*([\d,.]+)/i);
     transaction_id = tidMatch ? tidMatch[1] : null;
     amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
     payment_source = 'EasyPaisa';
   } 
-  else if (sender === '8585' || message_body.includes('JazzCash')) {
+  else if (sender === '8585' || message_body.toLowerCase().includes('jazzcash') || message_body.toLowerCase().includes('jazz')) {
     const tidMatch = message_body.match(/(?:TID|Ref)[:\s]*(\d+)/i);
     const amountMatch = message_body.match(/(?:Rs\.?|Amount)[:\s]*([\d,.]+)/i);
     transaction_id = tidMatch ? tidMatch[1] : null;
     amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = 'JazzCash';
+    payment_source = message_body.toLowerCase().includes('jazzcash') ? 'JazzCash' : 'Jazz';
   }
   else if (message_body.includes('NayaPay') || message_body.includes('SadaPay')) {
     const tidMatch = message_body.match(/(?:Ref No|Reference Code|TID)[:\s]*([A-Z0-9]+)/i);
