@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const API_BASE = '/api/v1';
@@ -286,6 +286,16 @@ function App() {
                                   Verify
                                 </button>
                               )}
+                                {row.receipt_image_url && (
+                                  <a 
+                                    href={`${API_BASE}${row.receipt_image_url}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] bg-slate-700 hover:bg-slate-600 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-slate-600 transition-all flex items-center gap-1"
+                                  >
+                                    <ImageIcon size={10} /> View Receipt
+                                  </a>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -325,6 +335,7 @@ function App() {
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">TID</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Course</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Evidence</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -351,6 +362,18 @@ function App() {
                             <span className="flex items-center gap-1 text-green-400 font-bold px-3 py-1 bg-green-500/20 rounded-full w-fit text-[10px] uppercase tracking-wider border border-green-500/30">
                               <CheckCircle size={10} /> Verified
                             </span>
+                          </td>
+                          <td className="p-4">
+                            {row.receipt_image_url && (
+                              <a 
+                                href={`${API_BASE}${row.receipt_image_url}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-[10px] bg-slate-700 hover:bg-slate-600 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-slate-600 transition-all flex items-center gap-1 inline-flex"
+                              >
+                                <ImageIcon size={10} /> View Receipt
+                              </a>
+                            )}
                           </td>
                         </tr>
                       ))}
