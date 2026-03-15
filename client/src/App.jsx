@@ -174,8 +174,8 @@ function App() {
     }
   };
 
-  const pendingAdmissions = admissions.filter(a => a.payment_status !== 'Verified');
-  const verifiedAdmissions = admissions.filter(a => a.payment_status === 'Verified');
+  const pendingAdmissions = admissions.filter(a => (a.payment_status || '').toLowerCase() !== 'verified');
+  const verifiedAdmissions = admissions.filter(a => (a.payment_status || '').toLowerCase() === 'verified');
 
   const exportToExcel = () => {
     if (verifiedAdmissions.length === 0) return alert('No verified students to export');
@@ -246,7 +246,7 @@ function App() {
                             <div className="font-bold text-sm text-indigo-400">{row.amount} {row.currency}</div>
                           </td>
                           <td className="p-4">
-                            {row.payment_status === 'Pending' ? (
+                            {(row.payment_status || '').toLowerCase() === 'pending' ? (
                               <span className="flex items-center gap-1 text-yellow-500 font-semibold px-2 py-1 bg-yellow-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider border border-yellow-500/20">
                                 <AlertCircle size={10} /> Pending Approval
                               </span>

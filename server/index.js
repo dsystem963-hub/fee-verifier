@@ -196,7 +196,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
           amount: amt,
           currency: 'PKR',
           payment_source: source,
-          status: 'verified',
+          status: 'Verified',
           timestamp: new Date().toISOString()
         }, { onConflict: 'transaction_id' });
 
@@ -267,7 +267,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
     }
     console.log('Step 2 SUCCESS. Log found:', !!log);
 
-    if (log && log.status === 'verified') {
+    if (log && (log.status === 'Verified' || log.status === 'verified')) {
       console.log('Step 3: Sending verification email...');
       await sendVerificationEmail(email, fullName, tid);
       console.log('Step 3 SUCCESS');
@@ -275,7 +275,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
 
     res.status(201).json({ 
       status: 'Submitted', 
-      paymentStatus: (log && (log.status === 'verified' || log.status === 'Verified')) ? 'Verified' : 'Pending' 
+      paymentStatus: (log && (log.status === 'Verified' || log.status === 'verified')) ? 'Verified' : 'Pending' 
     });
   } catch (err) {
     console.error('--- CRITICAL SUBMISSION ERROR ---');
