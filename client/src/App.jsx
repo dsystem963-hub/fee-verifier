@@ -93,7 +93,7 @@ function App() {
     if (val.length < 5) return;
     setVerificationStatus('loading');
     try {
-      const res = await axios.get(`${API_BASE}/verify-payment/${val}`);
+      const res = await axios.get(`${API_BASE}/verify-payment/${val}?amount=${formData.amount}`);
       if (res.data.claimed) {
         setVerificationStatus('claimed');
       } else if (res.data.verified) {

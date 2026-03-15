@@ -181,7 +181,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   let amt = null;
   let source = 'SMS Gateway';
 
-  const tidMatch = message_body.match(/(?:TID|Ref|Trans ID)[:\s]*([A-Z0-9]+)/i);
+  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|TID|Ref|Tid)[:\s]*([A-Z0-9]+)/i);
   const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
 
   if (tidMatch && amtMatch) {
@@ -308,6 +308,16 @@ app.get('/api/v1/verify-payment/:tid', async (req, res) => {
       .maybeSingle();
 
     if (log && (log.status === 'Verified' || log.status === 'verified')) {
+      // STRICT AMOUNT CHECK
+      const { amount: requestedAmount } = req.query;
+      if (requestedAmount && parseFloat(requestedAmount) !== parseFloat(log.amount)) {
+        return res.json({ 
+          verified: false, 
+          reason: 'Amount mismatch', 
+          expected: log.amount, 
+          received: requestedAmount 
+        });
+      }
       res.json({ verified: true, data: log });
     } else {
       res.json({ verified: false });
