@@ -181,7 +181,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   let amt = null;
   let source = 'SMS Gateway';
 
-  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|TID|Ref|Tid)[:\s]*([A-Z0-9]+)/i);
+  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|TID|Ref|Tid|IBFT|TxID)[:\s]*([a-z0-9]+)/i);
   const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
 
   if (tidMatch && amtMatch) {
