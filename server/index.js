@@ -169,12 +169,12 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 
       if (logError) throw logError;
 
-      // Check for admission
+      // Check for admission (maybeSingle won't throw if not found)
       const { data: student } = await supabase
         .from('admissions')
         .select('*')
         .eq('transaction_id', tid)
-        .single();
+        .maybeSingle();
 
       if (student) {
         await sendVerificationEmail(student.email, student.full_name, tid);
@@ -218,7 +218,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
       .from('payment_logs')
       .select('status')
       .eq('transaction_id', tid)
-      .single();
+      .maybeSingle();
 
     if (log && log.status === 'verified') {
       await sendVerificationEmail(email, fullName, tid);
@@ -242,9 +242,9 @@ app.get('/api/v1/verify-payment/:tid', async (req, res) => {
       .from('payment_logs')
       .select('*')
       .eq('transaction_id', tid)
-      .single();
+      .maybeSingle();
 
-    if (log && log.status === 'Verified') {
+    if (log && log.status === 'verified') {
       res.json({ verified: true, data: log });
     } else {
       res.json({ verified: false });
@@ -341,7 +341,7 @@ app.post('/api/v1/admin/approve', async (req, res) => {
         .from('admissions')
         .select('*')
         .eq('transaction_id', log.transaction_id)
-        .single();
+        .maybeSingle();
 
       if (student) {
         await sendVerificationEmail(student.email, student.full_name, log.transaction_id);
@@ -372,7 +372,7 @@ app.post('/api/v1/admin/force-match', async (req, res) => {
       .from('admissions')
       .select('*')
       .eq('transaction_id', transaction_id)
-      .single();
+      .maybeSingle();
 
     if (student) {
       await sendVerificationEmail(student.email, student.full_name, transaction_id);
