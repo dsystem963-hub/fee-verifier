@@ -230,6 +230,7 @@ function App() {
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Student Name</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Contact</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Details</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Course</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Payment</th>
                         <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
                         <th className="p-4 font-bold text-slate-400 whitespace-nowrap">Actions</th>
@@ -245,9 +246,11 @@ function App() {
                           </td>
                           <td className="p-4 text-sm text-slate-300">
                             <div>CNIC: {row.cnic}</div>
-                            <div className="text-blue-400 font-bold">{row.course}</div>
+                          </td>
+                          <td className="p-4">
+                            <div className="text-blue-400 font-bold text-sm">{row.course}</div>
                             {row.course_description && (
-                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 rounded border border-slate-700/50">
+                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 px-2 rounded border border-slate-700/50 w-fit">
                                 {row.course_description}
                               </div>
                             )}
@@ -330,14 +333,16 @@ function App() {
                           </td>
                           <td className="p-4 text-sm text-slate-400">
                             <div>CNIC: {row.cnic}</div>
+                          </td>
+                          <td className="p-4 font-mono text-sm text-slate-300">{row.transaction_id}</td>
+                          <td className="p-4">
+                            <div className="font-bold text-blue-400 text-sm">{row.course}</div>
                             {row.course_description && (
-                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 rounded border border-slate-700/50">
+                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 px-2 rounded border border-slate-700/50 w-fit">
                                 {row.course_description}
                               </div>
                             )}
                           </td>
-                          <td className="p-4 font-mono text-sm text-slate-300">{row.transaction_id}</td>
-                          <td className="p-4 font-bold text-blue-400 text-sm">{row.course}</td>
                           <td className="p-4">
                             <span className="flex items-center gap-1 text-green-400 font-bold px-3 py-1 bg-green-500/20 rounded-full w-fit text-[10px] uppercase tracking-wider border border-green-500/30">
                               <CheckCircle size={10} /> Verified
