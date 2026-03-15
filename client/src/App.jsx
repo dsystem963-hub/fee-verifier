@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight, MapPin, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { countries } from './countries';
 
 const API_BASE = '/api/v1';
 
@@ -21,7 +22,10 @@ function App() {
     currency: 'PKR',
     source: '',
     idType: '', // NEW
+    country: '', // NEW
   });
+  const [countrySearch, setCountrySearch] = useState('');
+  const [showCountryResults, setShowCountryResults] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [message, setMessage] = useState('');
   const [showCourseOptions, setShowCourseOptions] = useState(false); // NEW
@@ -52,7 +56,9 @@ function App() {
       currency: 'PKR',
       source: '',
       idType: '',
+      country: '',
     });
+    setCountrySearch('');
     setTid('');
     setReceipt(null);
     setVerificationStatus('idle');
@@ -122,6 +128,7 @@ function App() {
       data.append('cnic', `${formData.idType}: ${formData.cnic}`);
       data.append('course', formData.course);
       data.append('course_description', formData.courseDescription);
+      data.append('country', formData.country);
       data.append('transaction_id', tid);
       data.append('amount', formData.amount);
       data.append('currency', formData.currency);
@@ -149,7 +156,8 @@ function App() {
           tid,
           source: formData.source,
           amount: formData.amount,
-          currency: 'PKR'
+          currency: 'PKR',
+          country: 'Pakistan'
         });
 
         if (res.data.paymentStatus === 'Verified') {
@@ -227,6 +235,7 @@ function App() {
 
     const data = filteredVerifiedAdmissions.map(a => ({
       'Full Name': a.full_name,
+      'Country': a.country || 'Pakistan',
       'Email': a.email,
       'Mobile': a.mobile_number,
       'CNIC': a.cnic,
@@ -278,7 +287,14 @@ function App() {
                     <tbody>
                       {pendingAdmissions.map((row) => (
                         <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
-                          <td className="p-4 font-medium">{row.full_name}</td>
+                          <td className="p-4">
+                            <div className="font-medium">{row.full_name}</div>
+                            {row.country && (
+                              <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 uppercase tracking-wider font-bold">
+                                <MapPin size={8} /> {row.country}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-4 text-xs">
                             <div className="text-slate-200">{row.email}</div>
                             <div className="text-slate-400">{row.mobile_number}</div>
@@ -409,7 +425,14 @@ function App() {
                     <tbody>
                       {paginatedVerifiedAdmissions.map((row) => (
                         <tr key={row.id} className="border-b border-slate-700/50 bg-green-500/5 hover:bg-green-500/10 transition">
-                          <td className="p-4 font-bold text-slate-100">{row.full_name}</td>
+                          <td className="p-4">
+                            <div className="font-bold text-slate-100">{row.full_name}</div>
+                            {row.country && (
+                              <div className="text-[10px] text-green-500/70 flex items-center gap-1 mt-0.5 uppercase tracking-wider font-bold">
+                                <MapPin size={8} /> {row.country}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-4 text-xs">
                             <div className="text-slate-300">{row.email}</div>
                             <div className="text-slate-400">{row.mobile_number}</div>
@@ -538,6 +561,54 @@ function App() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {isInternational && (
+              <div className="group space-y-3 relative md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
+                  <MapPin size={14} /> Select Your Country
+                </label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    required={isInternational}
+                    placeholder="Type name of your country (e.g. Australia)" 
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 pr-12 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700 font-bold" 
+                    value={countrySearch || formData.country} 
+                    onChange={(e) => {
+                      setCountrySearch(e.target.value);
+                      setShowCountryResults(true);
+                      if (!e.target.value) setFormData({...formData, country: ''});
+                    }}
+                    onFocus={() => setShowCountryResults(true)}
+                  />
+                  <ChevronDown size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                  
+                  {showCountryResults && (countrySearch) && (
+                    <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                      {countries
+                        .filter(c => c.toLowerCase().startsWith(countrySearch.toLowerCase()))
+                        .map((country, idx) => (
+                          <div 
+                            key={idx}
+                            onClick={() => {
+                              setFormData({ ...formData, country: country });
+                              setCountrySearch(country);
+                              setShowCountryResults(false);
+                            }}
+                            className="p-4 hover:bg-blue-600/20 cursor-pointer border-b border-slate-800 last:border-0 transition-colors font-medium flex items-center justify-between group"
+                          >
+                            <span>{country}</span>
+                            <CheckCircle size={14} className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        ))}
+                      {countries.filter(c => c.toLowerCase().startsWith(countrySearch.toLowerCase())).length === 0 && (
+                        <div className="p-4 text-slate-500 italic text-sm text-center">No countries found matching "{countrySearch}"</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="group space-y-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
                 <User size={14} /> Full Name

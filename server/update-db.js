@@ -1,28 +1,33 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS admissions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      full_name TEXT,
-      email TEXT,
-      transaction_id TEXT,
-      source TEXT,
-      amount REAL,
-      currency TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `, (err) => {
-    if (err) {
-      console.error('Error creating admissions table:', err.message);
-    } else {
-      console.log('admissions table ready.');
-    }
-  });
-});
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables.');
+  process.exit(1);
+}
 
-db.close();
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function updateSchema() {
+  console.log('--- Updating Supabase Schema ---');
+  
+  // Note: Standard Supabase JS client doesn't support ALTER TABLE directly easily without RPC or similar.
+  // But we can try to fetch table info or just assume we need to tell the user to run SQL.
+  // Actually, I can use the `postgres` extension if available or just check if it exists.
+  
+  // Alternatively, I'll just provide the SQL command in the notification.
+  // But wait, the user wants me to do it.
+  
+  // I'll try to insert a record with the new column to see if it works (Supabase sometimes auto-adds or errors).
+  // No, that's not clean.
+  
+  console.log('Please run the following SQL in your Supabase SQL Editor:');
+  console.log('ALTER TABLE admissions ADD COLUMN IF NOT EXISTS country TEXT;');
+  
+  // If I have the postgres connection details, I could do it. But I only have the API Key.
+}
+
+updateSchema();

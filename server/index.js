@@ -227,7 +227,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 
 // Submit Student Admission (Immediate)
 app.post('/api/v1/admission/submit', async (req, res) => {
-  const { fullName, email, mobileNumber, cnic, course, courseDescription, tid, source, amount, currency } = req.body;
+  const { fullName, email, mobileNumber, cnic, course, courseDescription, tid, amount, currency, source, country } = req.body;
   const cleanTid = tid ? tid.trim().toUpperCase() : '';
   
   try {
@@ -251,6 +251,7 @@ app.post('/api/v1/admission/submit', async (req, res) => {
         cnic,
         course,
         course_description: courseDescription,
+        country: country || 'Pakistan',
         transaction_id: cleanTid,
         source,
         amount: amount ? parseFloat(amount) : 0,
@@ -318,7 +319,7 @@ app.get('/api/v1/verify-payment/:tid', async (req, res) => {
 
 // Submit International Payment Evidence
 app.post('/api/v1/admission/international-payment', upload.single('receipt'), async (req, res) => {
-  const { fullName, email, mobileNumber, cnic, course, transaction_id, amount, currency, payment_source } = req.body;
+  const { fullName, email, mobileNumber, cnic, course, transaction_id, amount, currency, payment_source, country } = req.body;
   const cleanTid = transaction_id ? transaction_id.trim().toUpperCase() : '';
   const receipt_image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
@@ -343,6 +344,7 @@ app.post('/api/v1/admission/international-payment', upload.single('receipt'), as
         mobile_number: mobileNumber,
         cnic,
         course,
+        country: country,
         transaction_id: cleanTid,
         source: payment_source,
         amount,
