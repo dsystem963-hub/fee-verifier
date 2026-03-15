@@ -125,7 +125,7 @@ function App() {
       }
     } else {
       try {
-        await axios.post(`${API_BASE}/admission/submit`, {
+        const res = await axios.post(`${API_BASE}/admission/submit`, {
           fullName: formData.fullName,
           email: formData.email,
           mobileNumber: formData.mobileNumber,
@@ -136,7 +136,12 @@ function App() {
           amount: formData.amount,
           currency: 'PKR'
         });
-        setMessage('Success! Your admission form has been submitted. We are verifying your payment, Once your payment is verified, you will be notified through Email.');
+
+        if (res.data.paymentStatus === 'Verified') {
+          setMessage('Success! Your admission form has been submitted and your payment was automatically verified. You will receive an email shortly.');
+        } else {
+          setMessage('Success! Your admission form has been submitted. We are verifying your payment, Once your payment is verified, you will be notified through Email.');
+        }
         resetForm();
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting admission form.';

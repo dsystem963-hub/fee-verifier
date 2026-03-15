@@ -198,11 +198,14 @@ app.post('/api/v1/admission/submit', async (req, res) => {
       .eq('transaction_id', tid)
       .single();
 
-    if (log && log.status === 'Verified') {
+    if (log && log.status === 'verified') {
       await sendVerificationEmail(email, fullName, tid);
     }
 
-    res.status(201).json({ status: 'Submitted' });
+    res.status(201).json({ 
+      status: 'Submitted', 
+      paymentStatus: (log && log.status === 'verified') ? 'Verified' : 'Pending' 
+    });
   } catch (err) {
     console.error('Submission Error:', err);
     res.status(500).json({ error: err.message });
