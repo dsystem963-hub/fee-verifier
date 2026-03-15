@@ -328,7 +328,14 @@ function App() {
                             <div className="text-slate-300">{row.email}</div>
                             <div className="text-slate-400">{row.mobile_number}</div>
                           </td>
-                          <td className="p-4 text-sm text-slate-400">CNIC: {row.cnic}</td>
+                          <td className="p-4 text-sm text-slate-400">
+                            <div>CNIC: {row.cnic}</div>
+                            {row.course_description && (
+                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 rounded border border-slate-700/50">
+                                {row.course_description}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-4 font-mono text-sm text-slate-300">{row.transaction_id}</td>
                           <td className="p-4 font-bold text-blue-400 text-sm">{row.course}</td>
                           <td className="p-4">
@@ -467,17 +474,19 @@ function App() {
                 )}
               </div>
 
-              <div className="group space-y-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
-                  Course Description
-                </label>
-                <textarea
-                  placeholder="e.g. Any additional details about your course or interest..."
-                  className="w-full h-[58px] bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700 text-sm resize-none"
-                  value={formData.courseDescription}
-                  onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
-                />
-              </div>
+              {formData.course && (
+                <div className="group space-y-3 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                     Additional Class Info (e.g. {formData.course === 'Artificial Intelligence' ? 'Evening Class 11 Pm' : 'Timing/Batch'})
+                  </label>
+                  <textarea
+                    placeholder="e.g. Evening Class 11 Pm..."
+                    className="w-full h-[58px] bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700 text-sm resize-none"
+                    value={formData.courseDescription}
+                    onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
