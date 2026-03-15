@@ -185,7 +185,7 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
 
   if (tidMatch && amtMatch) {
-    tid = tidMatch[1];
+    tid = tidMatch[1].trim().toUpperCase();
     amt = parseFloat(amtMatch[1].replace(/,/g, ''));
 
     try {
