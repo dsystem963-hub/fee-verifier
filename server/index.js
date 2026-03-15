@@ -230,6 +230,17 @@ app.post('/api/v1/admission/submit', async (req, res) => {
   const { fullName, email, mobileNumber, cnic, course, courseDescription, tid, source, amount, currency } = req.body;
   
   try {
+    // 1. Check for duplicate TID
+    const { data: existing } = await supabase
+      .from('admissions')
+      .select('id')
+      .eq('transaction_id', tid)
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(400).json({ error: 'This Transaction ID has already been used for an admission.' });
+    }
+
     const { error: admError } = await supabase
       .from('admissions')
       .insert([{
@@ -298,6 +309,18 @@ app.post('/api/v1/admission/international-payment', upload.single('receipt'), as
   const receipt_image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
   try {
+    // 1. Check for duplicate TID
+    const { data: existing } = await supabase
+      .from('admissions')
+      .select('id')
+      .eq('transaction_id', transaction_id)
+      .maybeSingle();
+
+    if (existing) {
+      if (req.file) fs.unlinkSync(req.file.path); // Delete uploaded receipt if duplicate
+      return res.status(400).json({ error: 'This Transaction ID has already been used for an admission.' });
+    }
+
     const { error: admError } = await supabase
       .from('admissions')
       .insert([{
