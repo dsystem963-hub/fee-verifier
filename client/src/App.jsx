@@ -547,13 +547,20 @@ function App() {
                 <div className="absolute right-4 top-4">
                   {verificationStatus === 'loading' && <Loader2 className="animate-spin text-blue-500" size={24} />}
                   {verificationStatus === 'verified' && <div className="p-1 bg-green-500/20 rounded-full animate-in zoom-in"><CheckCircle className="text-green-500" size={20} /></div>}
+                  {verificationStatus === 'claimed' && <div className="p-1 bg-yellow-500/20 rounded-full animate-in zoom-in"><AlertCircle className="text-yellow-500" size={20} /></div>}
                   {verificationStatus === 'error' && <AlertCircle className="text-red-500" size={20} />}
                 </div>
               </div>
               {verificationStatus === 'verified' && (
-                <div className="flex items-center gap-2 text-[11px] text-green-400 bg-green-500/5 p-3 rounded-lg border border-green-500/20">
+                <div className="flex items-center gap-2 text-[11px] text-green-400 bg-green-500/5 p-3 rounded-lg border border-green-500/20 animate-in fade-in slide-in-from-top-2">
                   <CheckCircle size={14} />
                   <p className="font-semibold">Automatic verification successful! Source: {formData.source}</p>
+                </div>
+              )}
+              {verificationStatus === 'claimed' && (
+                <div className="flex items-center gap-2 text-[11px] text-yellow-500 bg-yellow-500/5 p-3 rounded-lg border border-yellow-500/20 animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle size={14} />
+                  <p className="font-semibold text-yellow-500">This Transaction ID has already been used for an admission.</p>
                 </div>
               )}
             </div>
