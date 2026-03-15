@@ -31,6 +31,7 @@ function App() {
   // Admin state
   const [admissions, setAdmissions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState('tid'); // tid, mobile, date
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -197,14 +198,21 @@ function App() {
     if (!isVerified) return false;
     
     const search = searchTerm.toLowerCase();
-    const dateStr = new Date(a.timestamp).toLocaleDateString().toLowerCase();
-    
-    return (
-      (a.transaction_id || '').toLowerCase().includes(search) ||
-      (a.mobile_number || '').toLowerCase().includes(search) ||
-      (a.full_name || '').toLowerCase().includes(search) ||
-      dateStr.includes(search)
-    );
+    if (!search) return true;
+
+    if (searchType === 'tid') {
+      return (a.transaction_id || '').toLowerCase().includes(search);
+    }
+    if (searchType === 'mobile') {
+      return (a.mobile_number || '').toLowerCase().includes(search);
+    }
+    if (searchType === 'date') {
+      const d = new Date(a.timestamp);
+      // Format to DD/MM/YY
+      const dmy = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear().toString().slice(-2)}`;
+      return dmy.includes(search);
+    }
+    return true;
   });
 
   // Pagination Logic
@@ -343,18 +351,36 @@ function App() {
                   <CheckCircle size={18} /> Verified Students
                 </h2>
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                    <input 
-                      type="text" 
-                      placeholder="Search TID, Mobile or Date..." 
-                      className="bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:border-blue-500 outline-none transition-all w-64"
-                      value={searchTerm}
+                  <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:border-blue-500 transition-all">
+                    <select 
+                      className="bg-slate-900 text-slate-400 text-xs font-bold border-r border-slate-700 px-3 py-2 outline-none cursor-pointer hover:bg-slate-850"
+                      value={searchType}
                       onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1); // Reset to page 1 on search
+                        setSearchType(e.target.value);
+                        setSearchTerm('');
+                        setCurrentPage(1);
                       }}
-                    />
+                    >
+                      <option value="tid">By TID</option>
+                      <option value="mobile">By Mobile</option>
+                      <option value="date">By Date</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                      <input 
+                        type="text" 
+                        placeholder={
+                          searchType === 'date' ? "e.g. 16/3/26" : 
+                          searchType === 'mobile' ? "Search Mobile..." : "Search TID..."
+                        }
+                        className="bg-transparent pl-10 pr-4 py-2 text-sm outline-none w-48"
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
+                    </div>
                   </div>
                   {filteredVerifiedAdmissions.length > 0 && (
                     <button
