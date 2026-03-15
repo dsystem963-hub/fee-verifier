@@ -84,17 +84,40 @@ if (!fs.existsSync(distPath)) {
 // Health Check
 app.get('/health', async (req, res) => {
   let dbConnection = false;
+  let writeTest = false;
+  let writeError = null;
+  
   try {
     if (supabase) {
-      const { data, error } = await supabase.from('admissions').select('count', { count: 'exact', head: true });
-      if (!error) dbConnection = true;
+      // 1. Test Read
+      const { data, error: readError } = await supabase.from('admissions').select('count', { count: 'exact', head: true });
+      if (!readError) dbConnection = true;
+
+      // 2. Test Write (to a separate temporary entry)
+      const testId = '00000000-0000-0000-0000-000000000000';
+      const { error: insertError } = await supabase.from('admissions').upsert([{ 
+        id: testId, 
+        full_name: 'HEALTH_CHECK_TEST', 
+        email: 'test@test.com' 
+      }]);
+      
+      if (!insertError) {
+        writeTest = true;
+        await supabase.from('admissions').delete().eq('id', testId);
+      } else {
+        writeError = insertError;
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    writeError = e.message;
+  }
 
   res.json({ 
     status: 'ok', 
     supabase_initialized: !!supabase,
     supabase_connected: dbConnection,
+    write_test: writeTest,
+    write_error: writeError,
     env_vars: {
       url: !!process.env.SUPABASE_URL,
       key: !!process.env.SUPABASE_KEY,
@@ -238,12 +261,16 @@ app.post('/api/v1/admission/submit', async (req, res) => {
       paymentStatus: (log && log.status === 'verified') ? 'Verified' : 'Pending' 
     });
   } catch (err) {
-    console.error('Submission Error:', err);
-    let msg = err.message;
-    if (msg.includes('fetch failed')) {
-      msg = 'CRITICAL ERROR: Cannot connect to Supabase. Your SUPABASE_URL in Render is likely incorrect or dead.';
+    console.error('--- CRITICAL SUBMISSION ERROR ---');
+    console.error('Error Name:', err.name);
+    console.error('Error Message:', err.message);
+    console.error('Full Error:', JSON.stringify(err, null, 2));
+
+    let msg = err.message || 'Unknown Error';
+    if (msg.toLowerCase().includes('fetch failed')) {
+      msg = 'SUPABASE CONNECTION FAILURE: The server cannot reach your Supabase URL. This is usually a typo in the URL or a firewall issue.';
     }
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: msg, details: err });
   }
 });
 
