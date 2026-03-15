@@ -165,25 +165,35 @@ const authenticateGateway = (req, res, next) => {
 
 // --- Task 2: Local SMS Parsing Engine ---
 app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
-  console.log(`[${new Date().toISOString()}] SMS Gateway Request received from IP: ${req.ip}`);
+  console.log(`[${new Date().toISOString()}] SMS Gateway Request:`, JSON.stringify({
+    method: req.method,
+    url: req.url,
+    query: req.query,
+    body: req.body,
+    headers: req.headers
+  }));
 
-  const message_body = req.body.message_body || req.body.body || req.body.text || req.body.message || req.body.msg || 
-                       req.query.message_body || req.query.body || req.query.text || req.query.message || req.query.msg || req.query.m;
-  
-  const sender = req.body.sender || req.body.from || req.body.phone || 
-                 req.query.sender || req.query.from || req.query.phone || req.query.s;
+  // Robust field extraction (case-insensitive keys)
+  const getField = (obj, variations) => {
+    if (!obj) return null;
+    const keys = Object.keys(obj);
+    for (const v of variations) {
+      const match = keys.find(k => k.toLowerCase() === v.toLowerCase());
+      if (match && obj[match]) return obj[match];
+    }
+    return null;
+  };
+
+  const bodyFields = ['message_body', 'message', 'msg', 'body', 'text', 'sms', 'messageBody'];
+  const senderFields = ['sender', 'from', 'phone', 'address', 'origin'];
+
+  const message_body = getField(req.body, bodyFields) || getField(req.query, bodyFields);
+  const sender = getField(req.body, senderFields) || getField(req.query, senderFields);
   
   if (!message_body || 
-      message_body === '[message]' || 
-      message_body === '%msg%' || 
-      message_body === '{msg}' || 
-      message_body === '{formatted-msg}') {
-    console.warn('Invalid Payload: App is sending literal placeholders. Received Body:', JSON.stringify(req.body));
-    return res.status(422).json({ 
-      error: 'Failed to parse required fields', 
-      details: 'The app is sending the literal tag code instead of the real SMS text.',
-      raw: message_body 
-    });
+      ['[message]', '%msg%', '{msg}', '{formatted-msg}'].includes(message_body)) {
+    console.warn('Invalid or placeholder message received:', message_body);
+    return res.status(422).json({ error: 'Invalid message body', body: message_body });
   }
 
   let transaction_id = null;
