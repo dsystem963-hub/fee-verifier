@@ -124,6 +124,7 @@ function App() {
         await axios.post(`${API_BASE}/admission/international-payment`, data);
         setMessage('Success! Your international payment evidence has been submitted for manual approval.');
         resetForm();
+        setTimeout(() => setMessage(''), 5000);
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting payment evidence.';
         setMessage(errorMsg);
@@ -149,6 +150,7 @@ function App() {
           setMessage('Success! Your admission form has been submitted. We are verifying your payment, Once your payment is verified, you will be notified through Email.');
         }
         resetForm();
+        setTimeout(() => setMessage(''), 5000);
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting admission form.';
         setMessage(errorMsg);
