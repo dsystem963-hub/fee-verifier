@@ -286,8 +286,20 @@ app.post('/api/v1/admission/submit', async (req, res) => {
 
 // Verify a TID (Public check)
 app.get('/api/v1/verify-payment/:tid', async (req, res) => {
-  const { tid } = req.params;
+  const tid = req.params.tid ? req.params.tid.trim().toUpperCase() : '';
   try {
+    // 1. Check if it's already used in an admission (Claimed)
+    const { data: existing } = await supabase
+      .from('admissions')
+      .select('id')
+      .eq('transaction_id', tid)
+      .maybeSingle();
+
+    if (existing) {
+        return res.json({ verified: false, claimed: true });
+    }
+
+    // 2. Check if verified in payment_logs
     const { data: log } = await supabase
       .from('payment_logs')
       .select('*')
