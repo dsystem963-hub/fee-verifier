@@ -1,11 +1,19 @@
-# Global Student Admission & Automated Fee Verification System
+# AdmitPay - AI Student Admission & Automated Fee Verification
 
-Automated fee verification system for local and international student admissions.
+AdmitPay is a premium automated fee verification system for local and international student admissions. It matches bank transaction IDs (TIDs) from SMS gateways with student applications in real-time.
 
 ## Tech Stack
-- **Backend:** Node.js (Express) + SQLite3
-- **Frontend:** React (Vite) + Tailwind CSS 4
-- **Database:** SQLite (local localized transaction logging)
+- **Backend:** Node.js (Express)
+- **Frontend:** React (Vite) + Tailwind CSS + Lucide Icons
+- **Database:** Supabase (PostgreSQL) - Persistent Cloud Storage
+- **Automation:** SMS Gateway integration for auto-verification
+
+## Features
+- **Premium UI:** Custom-built course selection and responsive design.
+- **Auto-Matching:** Automatically verifies payments received via EasyPaisa, JazzCash, and Pakistani Banks.
+- **Admin Security:** Password-protected dashboard for staff.
+- **Data Export:** Export verified student data to Excel (.xlsx) with one click.
+- **International Support:** Support for Wise, Western Union, and manual receipt uploads.
 
 ## Installation
 
@@ -13,10 +21,8 @@ Automated fee verification system for local and international student admissions
 ```bash
 cd server
 npm install
-node init-db.js
 node index.js
 ```
-The server will run on `http://localhost:5000`.
 
 ### 2. Frontend Setup
 ```bash
@@ -24,32 +30,11 @@ cd client
 npm install
 npm run dev
 ```
-The client will run on `http://localhost:5173`.
 
-## Task 2: Setting up "SMS Forwarder" (Android)
+## Production Deployment
+- **Supabase:** Ensure `SUPABASE_URL` and `SUPABASE_KEY` are set in the environment.
+- **SMS Gateway:** Configure your Android SMS forwarder to send POST requests to `/api/v1/gateway/local-sms?secret=123456`.
+- **Admin Password:** Default password is `admin786`.
 
-To automate local payment verification (EasyPaisa, JazzCash, Banks), configure an "SMS Forwarder" app on an Android device that receives the payment SMS:
-
-1. **Install an SMS Forwarder App:** (e.g., "SMS Forwarder" by Benoit Mortier or similar).
-2. **Add a Forwarding Rule:**
-   - **Filter:** Sender should match `8558` (EasyPaisa), `8585` (JazzCash), or your bank's shortcode.
-   - **Action:** Send a Webhook (POST request).
-3. **Configure Webhook URL:**
-   - **URL:** `http://YOUR_SERVER_IP:5000/api/v1/gateway/local-sms`
-   - **Method:** POST
-   - **Headers:** `x-gateway-secret: supersecretkey123` (Same as in `.env`)
-   - **Body Type:** JSON
-   - **JSON Template:**
-     ```json
-     {
-       "message_body": "{{message_body}}",
-       "sender": "{{sender}}"
-     }
-     ```
-4. **Test:** Send a test SMS or receive a payment. The system will automatically parse the TID and mark it as `Verified` in the database.
-
-## International Payments
-For international students (Wise, Remitly, etc.), they must toggle the "International Student" switch, enter their Reference Number/MTCN, and upload a digital receipt. These appear in the Admin Dashboard for manual verification.
-
-## Admin Dashboard
-Access the Admin view by clicking the "Admin" button on the top right of the admission form. Here you can approve pending international payments.
+## License
+ISC
