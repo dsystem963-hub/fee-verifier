@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const API_BASE = '/api/v1';
@@ -30,6 +30,9 @@ function App() {
 
   // Admin state
   const [admissions, setAdmissions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (isAdmin) {
@@ -187,12 +190,34 @@ function App() {
   };
 
   const pendingAdmissions = admissions.filter(a => (a.payment_status || '').toLowerCase() !== 'verified');
-  const verifiedAdmissions = admissions.filter(a => (a.payment_status || '').toLowerCase() === 'verified');
+  
+  // Filter Logic
+  const filteredVerifiedAdmissions = admissions.filter(a => {
+    const isVerified = (a.payment_status || '').toLowerCase() === 'verified';
+    if (!isVerified) return false;
+    
+    const search = searchTerm.toLowerCase();
+    const dateStr = new Date(a.timestamp).toLocaleDateString().toLowerCase();
+    
+    return (
+      (a.transaction_id || '').toLowerCase().includes(search) ||
+      (a.mobile_number || '').toLowerCase().includes(search) ||
+      (a.full_name || '').toLowerCase().includes(search) ||
+      dateStr.includes(search)
+    );
+  });
+
+  // Pagination Logic
+  const totalVerifiedPages = Math.ceil(filteredVerifiedAdmissions.length / itemsPerPage);
+  const paginatedVerifiedAdmissions = filteredVerifiedAdmissions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const exportToExcel = () => {
-    if (verifiedAdmissions.length === 0) return alert('No verified students to export');
+    if (filteredVerifiedAdmissions.length === 0) return alert('No students to export');
 
-    const data = verifiedAdmissions.map(a => ({
+    const data = filteredVerifiedAdmissions.map(a => ({
       'Full Name': a.full_name,
       'Email': a.email,
       'Mobile': a.mobile_number,
@@ -317,14 +342,29 @@ function App() {
                 <h2 className="text-xl font-bold text-green-500 flex items-center gap-2">
                   <CheckCircle size={18} /> Verified Students
                 </h2>
-                {verifiedAdmissions.length > 0 && (
-                  <button
-                    onClick={exportToExcel}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/20 active:scale-95"
-                  >
-                    <FileDown size={18} /> Export to Excel
-                  </button>
-                )}
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="Search TID, Mobile or Date..." 
+                      className="bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:border-blue-500 outline-none transition-all w-64"
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1); // Reset to page 1 on search
+                      }}
+                    />
+                  </div>
+                  {filteredVerifiedAdmissions.length > 0 && (
+                    <button
+                      onClick={exportToExcel}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/20 active:scale-95"
+                    >
+                      <FileDown size={18} /> Export
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
@@ -341,7 +381,7 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {verifiedAdmissions.slice(0, 1000).map((row) => (
+                      {paginatedVerifiedAdmissions.map((row) => (
                         <tr key={row.id} className="border-b border-slate-700/50 bg-green-500/5 hover:bg-green-500/10 transition">
                           <td className="p-4 font-bold text-slate-100">{row.full_name}</td>
                           <td className="p-4 text-xs">
@@ -382,8 +422,36 @@ function App() {
                     </tbody>
                   </table>
                 </div>
-                {verifiedAdmissions.length === 0 && (
-                  <p className="p-10 text-center text-slate-500 italic text-sm">Verified students will appear here.</p>
+                {filteredVerifiedAdmissions.length === 0 && (
+                  <p className="p-10 text-center text-slate-500 italic text-sm">No verified students found.</p>
+                )}
+
+                {/* Pagination Controls */}
+                {totalVerifiedPages > 1 && (
+                  <div className="p-4 bg-slate-900/50 border-t border-slate-700 flex justify-between items-center text-sm">
+                    <p className="text-slate-500">
+                      Showing <span className="text-slate-300">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-300">{Math.min(currentPage * itemsPerPage, filteredVerifiedAdmissions.length)}</span> of <span className="text-slate-300">{filteredVerifiedAdmissions.length}</span> students
+                    </p>
+                    <div className="flex gap-2">
+                      <button 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => prev - 1)}
+                        className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <div className="flex items-center px-4 font-bold text-blue-400 bg-slate-800 rounded-lg">
+                        Page {currentPage} of {totalVerifiedPages}
+                      </div>
+                      <button 
+                        disabled={currentPage === totalVerifiedPages}
+                        onClick={() => setCurrentPage(prev => prev + 1)}
+                        className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </section>
