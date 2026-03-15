@@ -82,10 +82,19 @@ if (!fs.existsSync(distPath)) {
 }
 
 // Health Check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  let dbConnection = false;
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('admissions').select('count', { count: 'exact', head: true });
+      if (!error) dbConnection = true;
+    }
+  } catch (e) {}
+
   res.json({ 
     status: 'ok', 
-    supabase: !!supabase,
+    supabase_initialized: !!supabase,
+    supabase_connected: dbConnection,
     env_vars: {
       url: !!process.env.SUPABASE_URL,
       key: !!process.env.SUPABASE_KEY,
@@ -230,7 +239,11 @@ app.post('/api/v1/admission/submit', async (req, res) => {
     });
   } catch (err) {
     console.error('Submission Error:', err);
-    res.status(500).json({ error: err.message });
+    let msg = err.message;
+    if (msg.includes('fetch failed')) {
+      msg = 'CRITICAL ERROR: Cannot connect to Supabase. Your SUPABASE_URL in Render is likely incorrect or dead.';
+    }
+    res.status(500).json({ error: msg });
   }
 });
 
