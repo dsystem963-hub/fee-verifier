@@ -158,8 +158,8 @@ const authenticateGateway = (req, res, next) => {
   if (secretKey === expectedKey && expectedKey) {
     next();
   } else {
-    console.error(`Auth Failed: Expected [${expectedKey}], but received nothing or mismatch.`);
-    res.status(401).json({ error: 'Unauthorized: Invalid Gateway Secret Key' });
+    console.error(`[${new Date().toISOString()}] Auth Failed: Expected [${expectedKey}], but received [${secretKey}]`);
+    res.status(401).json({ error: 'Unauthorized: Invalid Gateway Secret Key', received: secretKey });
   }
 };
 
