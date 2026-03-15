@@ -73,7 +73,7 @@ const distPath = path.join(__dirname, '../client/dist');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/v1/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(distPath));
 
 console.log('Serving static files from:', distPath);
@@ -355,7 +355,7 @@ app.post('/api/v1/admission/international-payment', upload.single('receipt'), as
     const { error: logError } = await supabase
       .from('payment_logs')
       .insert([{
-        transaction_id,
+        transaction_id: cleanTid,
         amount,
         currency,
         payment_source,
@@ -385,7 +385,8 @@ app.get('/api/v1/admin/admissions-status', async (req, res) => {
       .select('*');
 
     const combined = (admissions || []).map(a => {
-      const log = (logs || []).find(l => l.transaction_id === a.transaction_id);
+      const aTid = (a.transaction_id || '').trim().toUpperCase();
+      const log = (logs || []).find(l => (l.transaction_id || '').trim().toUpperCase() === aTid);
       return {
         ...a,
         log_id: log ? log.id : null,

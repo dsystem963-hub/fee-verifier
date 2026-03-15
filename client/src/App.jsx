@@ -20,6 +20,7 @@ function App() {
     amount: '',
     currency: 'PKR',
     source: '',
+    idType: '', // NEW
   });
   const [receipt, setReceipt] = useState(null);
   const [message, setMessage] = useState('');
@@ -46,6 +47,7 @@ function App() {
       amount: '',
       currency: 'PKR',
       source: '',
+      idType: '',
     });
     setTid('');
     setReceipt(null);
@@ -113,9 +115,9 @@ function App() {
       data.append('fullName', formData.fullName);
       data.append('email', formData.email);
       data.append('mobileNumber', formData.mobileNumber);
-      data.append('cnic', formData.cnic);
+      data.append('cnic', `${formData.idType}: ${formData.cnic}`);
       data.append('course', formData.course);
-      data.append('courseDescription', formData.courseDescription); // NEW
+      data.append('course_description', formData.courseDescription);
       data.append('transaction_id', tid);
       data.append('amount', formData.amount);
       data.append('currency', formData.currency);
@@ -474,17 +476,27 @@ function App() {
                   onChange={(e) => setFormData({ ...formData, cnic: e.target.value })} 
                 />
               ) : (
-                <select 
+                <div className="flex flex-col gap-3">
+                  <select 
+                    required 
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer text-slate-300" 
+                    value={formData.idType} 
+                    onChange={(e) => setFormData({ ...formData, idType: e.target.value })}
+                  >
+                    <option value="" className="text-slate-700">Select ID Type</option>
+                    <option value="Aadhaar Card or Voter ID">Aadhaar Card or Voter ID</option>
+                    <option value="Driver’s License or State ID">Driver’s License or State ID</option>
+                    <option value="National ID Card">National ID Card</option>
+                  </select>
+                  <input 
+                  type="text" 
                   required 
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer text-slate-300" 
+                  placeholder="Enter ID / Card Number" 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
                   value={formData.cnic} 
-                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
-                >
-                  <option value="" className="text-slate-700">Select ID Type</option>
-                  <option value="Aadhaar Card or Voter ID">Aadhaar Card or Voter ID</option>
-                  <option value="Driver’s License or State ID">Driver’s License or State ID</option>
-                  <option value="National ID Card">National ID Card</option>
-                </select>
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value })} 
+                />
+                </div>
               )}
             </div>
           </div>
