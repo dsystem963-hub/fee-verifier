@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CheckCircle, AlertCircle, Loader2, Upload, Globe, User, GraduationCap, DollarSign, LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const API_BASE = '/api/v1';
 
@@ -168,6 +169,29 @@ function App() {
     }
   };
 
+  const pendingAdmissions = admissions.filter(a => a.payment_status !== 'Verified');
+  const verifiedAdmissions = admissions.filter(a => a.payment_status === 'Verified');
+
+  const exportToExcel = () => {
+    if (verifiedAdmissions.length === 0) return alert('No verified students to export');
+
+    const data = verifiedAdmissions.map(a => ({
+      'Full Name': a.full_name,
+      'Email': a.email,
+      'Mobile': a.mobile_number,
+      'CNIC': a.cnic,
+      'Course': a.course,
+      'TID': a.transaction_id,
+      'Amount': `${a.amount} ${a.currency}`,
+      'Date': new Date(a.timestamp).toLocaleString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Verified Students");
+    XLSX.writeFile(wb, `Verified_Students_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -181,73 +205,131 @@ function App() {
             </button>
           </header>
 
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-900/50 border-b border-slate-700">
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Student Name</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Contact</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">CNIC</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Course</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">TID / Ref</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Amount</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
-                    <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {admissions.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
-                      <td className="p-4 font-medium">{row.full_name}</td>
-                      <td className="p-4 text-xs">
-                        <div className="text-slate-200">{row.email}</div>
-                        <div className="text-slate-400">{row.mobile_number}</div>
-                      </td>
-                      <td className="p-4 text-sm text-slate-300">{row.cnic}</td>
-                      <td className="p-4 text-sm text-slate-300">{row.course}</td>
-                      <td className="p-4 font-mono text-sm">{row.transaction_id}</td>
-                      <td className="p-4 font-bold">{row.amount} {row.currency}</td>
-                      <td className="p-4">
-                        {row.payment_status === 'Verified' ? (
-                          <span className="flex items-center gap-1 text-green-500 font-semibold px-2 py-1 bg-green-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
-                            <CheckCircle size={10} /> Verified
-                          </span>
-                        ) : row.payment_status === 'Pending' ? (
-                          <span className="flex items-center gap-1 text-yellow-500 font-semibold px-2 py-1 bg-yellow-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
-                            <AlertCircle size={10} /> Pending Approval
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-slate-500 font-semibold px-2 py-1 bg-slate-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider">
-                            <Loader2 size={10} className="animate-spin" /> Matching...
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-2">
-                          {row.payment_status === 'Pending' && (
-                            <button onClick={() => approvePayment(row.log_id)} className="text-[10px] bg-blue-600 hover:bg-blue-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all">
-                              Approve
-                            </button>
-                          )}
-                          {!row.payment_status && (
-                            <button onClick={() => forceMatch(row)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all">
-                              Verify
-                            </button>
-                          )}
-                          {row.receipt_image_url && (
-                            <a href={row.receipt_image_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 hover:bg-blue-600 px-3 py-1.5 rounded-full transition-all text-slate-300">Receipt</a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {admissions.length === 0 && (
-              <p className="p-20 text-center text-slate-500 italic">No admission requests yet.</p>
-            )}
+          <div className="space-y-12">
+            {/* Pending Section */}
+            <section>
+              <h2 className="text-xl font-bold text-slate-400 mb-4 flex items-center gap-2">
+                <Loader2 size={18} className="animate-spin text-yellow-500" /> Pending Applications
+              </h2>
+              <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-900/50 border-b border-slate-700">
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Student Name</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Contact</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Details</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Payment</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
+                        <th className="p-4 font-bold text-slate-400 whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingAdmissions.map((row) => (
+                        <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition">
+                          <td className="p-4 font-medium">{row.full_name}</td>
+                          <td className="p-4 text-xs">
+                            <div className="text-slate-200">{row.email}</div>
+                            <div className="text-slate-400">{row.mobile_number}</div>
+                          </td>
+                          <td className="p-4 text-sm text-slate-300">
+                            <div>CNIC: {row.cnic}</div>
+                            <div className="text-blue-400 font-bold">{row.course}</div>
+                          </td>
+                          <td className="p-4">
+                            <div className="font-mono text-xs">{row.transaction_id}</div>
+                            <div className="font-bold text-sm text-indigo-400">{row.amount} {row.currency}</div>
+                          </td>
+                          <td className="p-4">
+                            {row.payment_status === 'Pending' ? (
+                              <span className="flex items-center gap-1 text-yellow-500 font-semibold px-2 py-1 bg-yellow-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider border border-yellow-500/20">
+                                <AlertCircle size={10} /> Pending Approval
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-slate-500 font-semibold px-2 py-1 bg-slate-500/10 rounded-full w-fit text-[10px] uppercase tracking-wider border border-slate-500/20">
+                                <Loader2 size={10} className="animate-spin" /> Matching...
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-wrap gap-2">
+                              {row.payment_status === 'Pending' && (
+                                <button onClick={() => approvePayment(row.log_id)} className="text-[10px] bg-blue-600 hover:bg-blue-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                                  Approve
+                                </button>
+                              )}
+                              {!row.payment_status && (
+                                <button onClick={() => forceMatch(row)} className="text-[10px] bg-indigo-600 hover:bg-indigo-500 font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                                  Verify
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {pendingAdmissions.length === 0 && (
+                  <p className="p-10 text-center text-slate-500 italic text-sm">No pending applications at the moment.</p>
+                )}
+              </div>
+            </section>
+
+            {/* Verified Section */}
+            <section>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-green-500 flex items-center gap-2">
+                  <CheckCircle size={18} /> Verified Students
+                </h2>
+                {verifiedAdmissions.length > 0 && (
+                  <button 
+                    onClick={exportToExcel}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/20 active:scale-95"
+                  >
+                    <FileDown size={18} /> Export to Excel
+                  </button>
+                )}
+              </div>
+              <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-900/50 border-b border-slate-700">
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Student Name</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Contact</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Details</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">TID</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Course</th>
+                        <th className="p-4 font-semibold text-slate-400 whitespace-nowrap">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {verifiedAdmissions.slice(0, 1000).map((row) => (
+                        <tr key={row.id} className="border-b border-slate-700/50 bg-green-500/5 hover:bg-green-500/10 transition">
+                          <td className="p-4 font-bold text-slate-100">{row.full_name}</td>
+                          <td className="p-4 text-xs">
+                            <div className="text-slate-300">{row.email}</div>
+                            <div className="text-slate-400">{row.mobile_number}</div>
+                          </td>
+                          <td className="p-4 text-sm text-slate-400">CNIC: {row.cnic}</td>
+                          <td className="p-4 font-mono text-sm text-slate-300">{row.transaction_id}</td>
+                          <td className="p-4 font-bold text-blue-400 text-sm">{row.course}</td>
+                          <td className="p-4">
+                            <span className="flex items-center gap-1 text-green-400 font-bold px-3 py-1 bg-green-500/20 rounded-full w-fit text-[10px] uppercase tracking-wider border border-green-500/30">
+                              <CheckCircle size={10} /> Verified
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {verifiedAdmissions.length === 0 && (
+                  <p className="p-10 text-center text-slate-500 italic text-sm">Verified students will appear here.</p>
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>

@@ -1,14 +1,24 @@
-require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('CRITICAL: Supabase URL or Key missing in Environment Variables!');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Email Transporter (Configured via .env)
 const transporter = nodemailer.createTransport({
@@ -62,78 +72,7 @@ if (!fs.existsSync(distPath)) {
   console.warn('Warning: client/dist directory NOT found!');
 }
 
-// Database setup
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath);
-
-// Promisify DB operations
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
-});
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) reject(err);
-    else resolve(row);
-  });
-});
-
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) reject(err);
-    else resolve(rows);
-  });
-});
-
-// Initialize Tables
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS payment_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      transaction_id TEXT UNIQUE,
-      amount REAL,
-      currency TEXT,
-      payment_source TEXT,
-      status TEXT,
-      receipt_image_url TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS admissions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      full_name TEXT,
-      email TEXT,
-      mobile_number TEXT,
-      cnic TEXT,
-      course TEXT,
-      transaction_id TEXT,
-      source TEXT,
-      amount REAL,
-      currency TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `, (err) => {
-    if (!err) {
-      // If table just created or exists, ensure new columns are there (Migration)
-      const cols = [
-        { name: 'mobile_number', type: 'TEXT' },
-        { name: 'cnic', type: 'TEXT' },
-        { name: 'course', type: 'TEXT' }
-      ];
-      cols.forEach(col => {
-        db.run(`ALTER TABLE admissions ADD COLUMN ${col.name} ${col.type}`, (alterErr) => {
-          if (alterErr && !alterErr.message.includes('duplicate column name')) {
-            console.error(`Migration Error (${col.name}):`, alterErr.message);
-          }
-        });
-      });
-    }
-  });
-});
+// (SQLite initialization removed - using Supabase)
 
 // Multer setup for receipt uploads
 const storage = multer.diskStorage({
@@ -165,15 +104,9 @@ const authenticateGateway = (req, res, next) => {
 
 // --- Task 2: Local SMS Parsing Engine ---
 app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
-  console.log(`[${new Date().toISOString()}] SMS Gateway Request:`, JSON.stringify({
-    method: req.method,
-    url: req.url,
-    query: req.query,
-    body: req.body,
-    headers: req.headers
-  }));
+  const payload = req.body;
+  console.log(`[${new Date().toISOString()}] Incoming SMS:`, payload);
 
-  // Robust field extraction (case-insensitive keys)
   const getField = (obj, variations) => {
     if (!obj) return null;
     const keys = Object.keys(obj);
@@ -185,81 +118,53 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   };
 
   const bodyFields = ['message_body', 'message', 'msg', 'body', 'text', 'sms', 'messageBody'];
-  const senderFields = ['sender', 'from', 'phone', 'address', 'origin'];
-
   const message_body = getField(req.body, bodyFields) || getField(req.query, bodyFields);
-  const sender = getField(req.body, senderFields) || getField(req.query, senderFields);
   
-  if (!message_body || 
-      ['[message]', '%msg%', '{msg}', '{formatted-msg}'].includes(message_body)) {
-    console.warn('Invalid or placeholder message received:', message_body);
-    return res.status(422).json({ error: 'Invalid message body', body: message_body });
-  }
+  if (!message_body) return res.status(400).json({ error: 'No message body' });
 
-  let transaction_id = null;
-  let amount = null;
-  let payment_source = 'Unknown';
+  let tid = null;
+  let amt = null;
+  let source = 'SMS Gateway';
 
-  if (sender === '8558' || message_body.toLowerCase().includes('easypaisa')) {
-    const tidMatch = message_body.match(/(?:TID|Trans ID)[:\s]*(\d+)/i);
-    const amountMatch = message_body.match(/(?:Rs\.?|Amount)[:\s]*([\d,.]+)/i);
-    transaction_id = tidMatch ? tidMatch[1] : null;
-    amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = 'EasyPaisa';
-  } 
-  else if (sender === '8585' || message_body.toLowerCase().includes('jazzcash') || message_body.toLowerCase().includes('jazz')) {
-    const tidMatch = message_body.match(/(?:TID|Ref)[:\s]*(\d+)/i);
-    const amountMatch = message_body.match(/(?:Rs\.?|Amount)[:\s]*([\d,.]+)/i);
-    transaction_id = tidMatch ? tidMatch[1] : null;
-    amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = message_body.toLowerCase().includes('jazzcash') ? 'JazzCash' : 'Jazz';
-  }
-  else if (message_body.includes('NayaPay') || message_body.includes('SadaPay')) {
-    const tidMatch = message_body.match(/(?:Ref No|Reference Code|TID)[:\s]*([A-Z0-9]+)/i);
-    const amountMatch = message_body.match(/(?:Amount Received|Rs\.?|Amount)[:\s]*([\d,.]+)/i);
-    transaction_id = tidMatch ? tidMatch[1] : null;
-    amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = message_body.includes('NayaPay') ? 'NayaPay' : 'SadaPay';
-  }
-  else {
-    const tidMatch = message_body.match(/(?:Ref No|TRX ID|TID|Reference|Ref)[:\s]*([A-Z0-9]+)/i);
-    const amountMatch = message_body.match(/(?:PKR|Rs\.?|Amount)[:\s]*([\d,.]+)/i);
-    transaction_id = tidMatch ? tidMatch[1] : null;
-    amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null;
-    payment_source = 'Bank/Other';
-  }
+  const tidMatch = message_body.match(/(?:TID|Ref|Trans ID)[:\s]*([A-Z0-9]+)/i);
+  const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
 
-  if (!transaction_id) {
-    const tidMatch = message_body.match(/(?:TID|Ref)[:\s]*(\d{10,12})/i);
-    if (tidMatch) transaction_id = tidMatch[1];
-  }
+  if (tidMatch && amtMatch) {
+    tid = tidMatch[1];
+    amt = parseFloat(amtMatch[1].replace(/,/g, ''));
 
-  if (transaction_id && amount) {
     try {
-      await dbRun(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`, 
-        [transaction_id, amount, 'PKR', payment_source, 'Verified']);
-      console.log(`Successfully verified TID: ${transaction_id}`);
+      const { error: logError } = await supabase
+        .from('payment_logs')
+        .upsert({
+          transaction_id: tid,
+          amount: amt,
+          currency: 'PKR',
+          payment_source: source,
+          status: 'verified',
+          timestamp: new Date().toISOString()
+        }, { onConflict: 'transaction_id' });
 
-      // Auto-match: If an admission already exists for this TID, send email
-      const admission = await dbGet(`SELECT full_name, email FROM admissions WHERE transaction_id = ?`, [transaction_id]);
-      if (admission) {
-        sendVerificationEmail(admission.email, admission.full_name, transaction_id);
+      if (logError) throw logError;
+
+      // Check for admission
+      const { data: student } = await supabase
+        .from('admissions')
+        .select('*')
+        .eq('transaction_id', tid)
+        .single();
+
+      if (student) {
+        await sendVerificationEmail(student.email, student.full_name, tid);
       }
 
-      res.status(200).json({ status: 'Parsed & Saved', transaction_id, amount });
+      res.json({ success: true, tid, amt });
     } catch (err) {
-      console.error('Database Error during SMS parsing:', err.message);
-      if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(409).json({ error: 'Transaction already exists' });
-      }
-      return res.status(500).json({ error: 'Database error' });
+      console.error('Supabase Gateway Error:', err);
+      res.status(500).json({ error: err.message });
     }
   } else {
-    console.warn('Connection Successful but Parsing Failed:', message_body);
-    res.status(200).json({ 
-      status: 'Connected', 
-      details: 'Website reached successfully! This message is not a bank payment.' 
-    });
+    res.json({ status: 'Ignored', reason: 'No TID/Amount found' });
   }
 });
 
@@ -269,23 +174,38 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
 app.post('/api/v1/admission/submit', async (req, res) => {
   const { fullName, email, mobileNumber, cnic, course, tid, source, amount, currency } = req.body;
 
-  if (!fullName || !email || !tid || !mobileNumber || !cnic || !course) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
   try {
-    const result = await dbRun(`INSERT INTO admissions (full_name, email, mobile_number, cnic, course, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [fullName, email, mobileNumber, cnic, course, tid, source, amount, currency || 'PKR']);
-    
-    // Check if payment already exists
-    const payment = await dbGet(`SELECT status FROM payment_logs WHERE transaction_id = ?`, [tid]);
-    if (payment && payment.status === 'Verified') {
-      sendVerificationEmail(email, fullName, tid);
+    const { error: admError } = await supabase
+      .from('admissions')
+      .insert([{
+        full_name: fullName,
+        email,
+        mobile_number: mobileNumber,
+        cnic,
+        course,
+        transaction_id: tid,
+        source,
+        amount,
+        currency: currency || 'PKR',
+        timestamp: new Date().toISOString()
+      }]);
+
+    if (admError) throw admError;
+
+    const { data: log } = await supabase
+      .from('payment_logs')
+      .select('status')
+      .eq('transaction_id', tid)
+      .single();
+
+    if (log && log.status === 'Verified') {
+      await sendVerificationEmail(email, fullName, tid);
     }
 
-    res.status(201).json({ status: 'Submitted', id: result.lastID });
+    res.status(201).json({ status: 'Submitted' });
   } catch (err) {
-    res.status(500).json({ error: 'Database error' });
+    console.error('Submission Error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -293,14 +213,19 @@ app.post('/api/v1/admission/submit', async (req, res) => {
 app.get('/api/v1/verify-payment/:tid', async (req, res) => {
   const { tid } = req.params;
   try {
-    const row = await dbGet(`SELECT * FROM payment_logs WHERE transaction_id = ?`, [tid]);
-    if (row && row.status === 'Verified') {
-      res.json({ verified: true, data: row });
+    const { data: log } = await supabase
+      .from('payment_logs')
+      .select('*')
+      .eq('transaction_id', tid)
+      .single();
+
+    if (log && log.status === 'Verified') {
+      res.json({ verified: true, data: log });
     } else {
-      res.json({ verified: false, message: 'Matching process active...' });
+      res.json({ verified: false });
     }
   } catch (err) {
-    res.status(500).json({ error: 'Database error' });
+    res.json({ verified: false });
   }
 });
 
@@ -309,68 +234,97 @@ app.post('/api/v1/admission/international-payment', upload.single('receipt'), as
   const { fullName, email, mobileNumber, cnic, course, transaction_id, amount, currency, payment_source } = req.body;
   const receipt_image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-  if (!transaction_id || !amount || !receipt_image_url || !fullName || !email || !mobileNumber || !cnic || !course) {
-    return res.status(400).json({ error: 'Missing required fields or receipt image' });
-  }
-
   try {
-    await dbRun('BEGIN TRANSACTION');
-    await dbRun(`INSERT INTO admissions (full_name, email, mobile_number, cnic, course, transaction_id, source, amount, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [fullName, email, mobileNumber, cnic, course, transaction_id, payment_source, amount, currency]);
-    const result = await dbRun(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status, receipt_image_url) VALUES (?, ?, ?, ?, ?, ?)`,
-      [transaction_id, amount, currency, payment_source, 'Pending', receipt_image_url]);
-    await dbRun('COMMIT');
-    res.status(201).json({ status: 'Submitted for Approval', id: result.lastID });
+    const { error: admError } = await supabase
+      .from('admissions')
+      .insert([{
+        full_name: fullName,
+        email,
+        mobile_number: mobileNumber,
+        cnic,
+        course,
+        transaction_id,
+        source: payment_source,
+        amount,
+        currency,
+        timestamp: new Date().toISOString()
+      }]);
+
+    if (admError) throw admError;
+
+    const { error: logError } = await supabase
+      .from('payment_logs')
+      .insert([{
+        transaction_id,
+        amount,
+        currency,
+        payment_source,
+        status: 'Pending',
+        receipt_image_url,
+        timestamp: new Date().toISOString()
+      }]);
+
+    if (logError) throw logError;
+
+    res.status(201).json({ status: 'Submitted' });
   } catch (err) {
-    await dbRun('ROLLBACK');
-    if (err.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Reference Number/TID already exists' });
-    }
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Admin: Get All Admission Status (Joined)
 app.get('/api/v1/admin/admissions-status', async (req, res) => {
   try {
-    const rows = await dbAll(`
-      SELECT 
-        a.*, 
-        p.id as log_id,
-        p.status as payment_status, 
-        p.payment_source as verified_source,
-        p.receipt_image_url
-      FROM admissions a
-      LEFT JOIN payment_logs p ON a.transaction_id = p.transaction_id
-      ORDER BY a.timestamp DESC
-    `);
-    res.json(rows);
+    const { data: admissions } = await supabase
+      .from('admissions')
+      .select('*')
+      .order('timestamp', { ascending: false });
+
+    const { data: logs } = await supabase
+      .from('payment_logs')
+      .select('*');
+
+    const combined = (admissions || []).map(a => {
+      const log = (logs || []).find(l => l.transaction_id === a.transaction_id);
+      return {
+        ...a,
+        log_id: log ? log.id : null,
+        payment_status: log ? log.status : null,
+        receipt_image_url: log ? log.receipt_image_url : null
+      };
+    });
+
+    res.json(combined);
   } catch (err) {
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Admin: Approve Payment
 app.post('/api/v1/admin/approve', async (req, res) => {
-  const { id } = req.body; // payment_logs id
+  const { id } = req.body;
   try {
-    await dbRun(`UPDATE payment_logs SET status = 'Verified' WHERE id = ?`, [id]);
-    
-    // Find the student linked to this payment log to send email
-    const record = await dbGet(`
-      SELECT a.full_name, a.email, a.transaction_id 
-      FROM admissions a
-      INNER JOIN payment_logs p ON a.transaction_id = p.transaction_id
-      WHERE p.id = ?
-    `, [id]);
-    
-    if (record) {
-      sendVerificationEmail(record.email, record.full_name, record.transaction_id);
-    }
+    const { data: log } = await supabase
+      .from('payment_logs')
+      .update({ status: 'Verified' })
+      .eq('id', id)
+      .select()
+      .single();
 
+    if (log) {
+      const { data: student } = await supabase
+        .from('admissions')
+        .select('*')
+        .eq('transaction_id', log.transaction_id)
+        .single();
+
+      if (student) {
+        await sendVerificationEmail(student.email, student.full_name, log.transaction_id);
+      }
+    }
     res.json({ status: 'Verified' });
   } catch (err) {
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -378,20 +332,30 @@ app.post('/api/v1/admin/approve', async (req, res) => {
 app.post('/api/v1/admin/force-match', async (req, res) => {
   const { transaction_id, amount, currency, source } = req.body;
   try {
-    await dbRun(`INSERT INTO payment_logs (transaction_id, amount, currency, payment_source, status) VALUES (?, ?, ?, ?, ?)`,
-      [transaction_id, amount, currency || 'PKR', source || 'Manual', 'Verified']);
-    
-    const admission = await dbGet(`SELECT full_name, email FROM admissions WHERE transaction_id = ?`, [transaction_id]);
-    if (admission) {
-      sendVerificationEmail(admission.email, admission.full_name, transaction_id);
+    await supabase
+      .from('payment_logs')
+      .upsert({
+        transaction_id,
+        amount,
+        currency: currency || 'PKR',
+        payment_source: source || 'Manual',
+        status: 'Verified',
+        timestamp: new Date().toISOString()
+      }, { onConflict: 'transaction_id' });
+
+    const { data: student } = await supabase
+      .from('admissions')
+      .select('*')
+      .eq('transaction_id', transaction_id)
+      .single();
+
+    if (student) {
+      await sendVerificationEmail(student.email, student.full_name, transaction_id);
     }
 
     res.json({ status: 'Verified' });
   } catch (err) {
-    if (err.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Transaction already verified' });
-    }
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: err.message });
   }
 });
 
