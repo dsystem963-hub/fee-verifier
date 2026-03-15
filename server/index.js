@@ -11,14 +11,23 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Supabase Setup
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.trim() : null;
+const supabaseKey = process.env.SUPABASE_KEY ? process.env.SUPABASE_KEY.trim() : null;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('CRITICAL: Supabase URL or Key missing in Environment Variables!');
+console.log('--- Initializing Supabase ---');
+console.log('URL defined:', !!supabaseUrl);
+console.log('Key defined:', !!supabaseKey);
+
+let supabase;
+try {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase URL or Key is missing. Check Render Environment Variables.');
+  }
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('Supabase client created successfully.');
+} catch (error) {
+  console.error('FAILED to initialize Supabase:', error.message);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Email Transporter (Configured via .env)
 const transporter = nodemailer.createTransport({
@@ -71,6 +80,19 @@ console.log('Serving static files from:', distPath);
 if (!fs.existsSync(distPath)) {
   console.warn('Warning: client/dist directory NOT found!');
 }
+
+// Health Check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    supabase: !!supabase,
+    env_vars: {
+      url: !!process.env.SUPABASE_URL,
+      key: !!process.env.SUPABASE_KEY,
+      gateway: !!process.env.GATEWAY_SECRET_KEY
+    }
+  });
+});
 
 // (SQLite initialization removed - using Supabase)
 
