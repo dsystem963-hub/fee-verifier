@@ -439,9 +439,30 @@ function App() {
             </div>
             <div className="group space-y-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
-                <User size={14} /> CNIC Number
+                <User size={14} /> {isInternational ? 'Identity Document' : 'CNIC Number'}
               </label>
-              <input type="text" required placeholder="e.g. 42101-1234567-1" className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" value={formData.cnic} onChange={(e) => setFormData({ ...formData, cnic: e.target.value })} />
+              {!isInternational ? (
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="e.g. 42101-1234567-1" 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700" 
+                  value={formData.cnic} 
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value })} 
+                />
+              ) : (
+                <select 
+                  required 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer text-slate-300" 
+                  value={formData.cnic} 
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                >
+                  <option value="" className="text-slate-700">Select ID Type</option>
+                  <option value="Aadhaar Card or Voter ID">Aadhaar Card or Voter ID</option>
+                  <option value="Driver’s License or State ID">Driver’s License or State ID</option>
+                  <option value="National ID Card">National ID Card</option>
+                </select>
+              )}
             </div>
           </div>
 
