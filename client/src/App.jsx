@@ -62,7 +62,7 @@ function App() {
   };
 
   const courses = [
-    "Computer Science", "Information Technology", "Business Administration", 
+    "Computer Science", "Information Technology", "Business Administration",
     "Software Engineering", "Artificial Intelligence", "Cyber Security",
     "Data Science", "Digital Marketing", "Fashion Design", "Graphic Design"
   ];
@@ -246,6 +246,11 @@ function App() {
                           <td className="p-4 text-sm text-slate-300">
                             <div>CNIC: {row.cnic}</div>
                             <div className="text-blue-400 font-bold">{row.course}</div>
+                            {row.course_description && (
+                              <div className="text-[10px] text-slate-500 italic mt-1 bg-slate-900/50 p-1 rounded border border-slate-700/50">
+                                {row.course_description}
+                              </div>
+                            )}
                           </td>
                           <td className="p-4">
                             <div className="font-mono text-xs">{row.transaction_id}</div>
@@ -294,7 +299,7 @@ function App() {
                   <CheckCircle size={18} /> Verified Students
                 </h2>
                 {verifiedAdmissions.length > 0 && (
-                  <button 
+                  <button
                     onClick={exportToExcel}
                     className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/20 active:scale-95"
                   >
@@ -362,7 +367,7 @@ function App() {
             Admit<span className="text-blue-400">Pay</span> Admission
           </h2>
           <p className="text-lg text-slate-400 font-medium tracking-wide">Global Education Portal 2026</p>
-          <button 
+          <button
             onClick={() => {
               const pass = prompt('Enter Admin Password:');
               if (pass === 'admin786') {
@@ -370,7 +375,7 @@ function App() {
               } else {
                 alert('Invalid Password');
               }
-            }} 
+            }}
             className="absolute top-6 right-6 text-[10px] font-bold tracking-widest uppercase bg-slate-800/50 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all duration-300 text-slate-500 hover:text-blue-400"
           >
             Admin Portal
@@ -430,9 +435,9 @@ function App() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
                   <GraduationCap size={14} /> Admission Applied In
                 </label>
-                
+
                 {/* Custom Beautiful Dropdown */}
-                <div 
+                <div
                   className="w-full bg-slate-950/50 border border-slate-800 rounded-xl p-4 cursor-pointer flex justify-between items-center hover:border-blue-500/30 transition-all text-slate-300"
                   onClick={() => setShowCourseOptions(!showCourseOptions)}
                 >
@@ -447,8 +452,8 @@ function App() {
                 {showCourseOptions && (
                   <div className="absolute top-full left-0 w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     {courses.map(c => (
-                      <div 
-                        key={c} 
+                      <div
+                        key={c}
                         className="p-4 hover:bg-blue-600/20 hover:text-blue-400 cursor-pointer transition-colors border-b border-slate-800/50 last:border-0 text-sm font-medium"
                         onClick={() => {
                           setFormData({ ...formData, course: c });
@@ -464,12 +469,12 @@ function App() {
 
               <div className="group space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 group-focus-within:text-blue-400 transition-colors">
-                   Course Description
+                  Course Description
                 </label>
-                <textarea 
-                  placeholder="e.g. Any additional details about your course or interest..." 
+                <textarea
+                  placeholder="e.g. Any additional details about your course or interest..."
                   className="w-full h-[58px] bg-slate-950/50 border border-slate-800 rounded-xl p-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-700 text-sm resize-none"
-                  value={formData.courseDescription} 
+                  value={formData.courseDescription}
                   onChange={(e) => setFormData({ ...formData, courseDescription: e.target.value })}
                 />
               </div>
