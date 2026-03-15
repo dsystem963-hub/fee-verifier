@@ -301,7 +301,7 @@ app.get('/api/v1/verify-payment/:tid', async (req, res) => {
       .eq('transaction_id', tid)
       .maybeSingle();
 
-    if (log && log.status === 'verified') {
+    if (log && (log.status === 'Verified' || log.status === 'verified')) {
       res.json({ verified: true, data: log });
     } else {
       res.json({ verified: false });
