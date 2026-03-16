@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight, MapPin, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight, MapPin, ChevronDown, Users, Percent, ClipboardList } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { countries } from './countries';
 
@@ -28,6 +28,13 @@ function App() {
   const [showCountryResults, setShowCountryResults] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [message, setMessage] = useState('');
+  
+  // View State (form, checker)
+  const [currentView, setCurrentView] = useState('form');
+  const [checkEmail, setCheckEmail] = useState('');
+  const [checkTid, setCheckTid] = useState('');
+  const [statusResult, setStatusResult] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [showCourseOptions, setShowCourseOptions] = useState(false); // NEW
   const [adminAuth, setAdminAuth] = useState(false); // NEW
   const [adminPass, setAdminPass] = useState(''); // NEW
@@ -45,21 +52,34 @@ function App() {
     }
   }, [isAdmin]);
 
+  const handleCheckStatus = async (e) => {
+    e.preventDefault();
+    setStatusLoading(true);
+    setStatusResult(null);
+    setMessage('');
+    try {
+      const res = await axios.get(`${API_BASE}/student/status`, {
+        params: { email: checkEmail, tid: checkTid }
+      });
+      setStatusResult(res.data);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Record not found. Please check your details.';
+      setMessage(errorMsg);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
-      fullName: '',
-      email: '',
-      mobileNumber: '',
-      cnic: '',
-      course: '',
-      amount: '',
-      currency: 'PKR',
-      source: '',
-      idType: '',
-      country: '',
+      fullName: '', email: '', mobileNumber: '', cnic: '', course: '',
+      courseDescription: '', amount: '', currency: 'PKR', source: '', idType: '', country: ''
     });
     setCountrySearch('');
     setTid('');
+    setCheckEmail('');
+    setCheckTid('');
+    setStatusResult(null);
     setReceipt(null);
     setVerificationStatus('idle');
   };
@@ -251,6 +271,16 @@ function App() {
     XLSX.writeFile(wb, `Verified_Students_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Analytics Calculations
+  const verifiedCount = admissions.filter(a => (a.payment_status || '').toLowerCase() === 'verified').length;
+  const totalRevenue = admissions
+    .filter(a => (a.payment_status || '').toLowerCase() === 'verified')
+    .reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+  
+  const domesticCount = admissions.filter(a => (a.country || '').toLowerCase() === 'pakistan' || !a.country).length;
+  const intlCount = admissions.length - domesticCount;
+  const conversionRate = admissions.length > 0 ? ((verifiedCount / admissions.length) * 100).toFixed(1) : 0;
+
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -259,10 +289,118 @@ function App() {
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <LayoutDashboard className="text-blue-400" /> Admit<span className="text-blue-400">Pay</span> Dashboard
             </h1>
-            <button onClick={() => setIsAdmin(false)} className="px-4 py-2 bg-slate-800 rounded hover:bg-slate-700 transition">
+            <button onClick={() => setIsAdmin(false)} className="px-4 py-2 bg-slate-800 rounded hover:bg-slate-700 transition font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95">
               Student View
             </button>
           </header>
+
+          {/* Analytics Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-blue-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                  <DollarSign size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Total Revenue</div>
+                  <div className="text-2xl font-bold text-slate-100">{totalRevenue.toLocaleString()} <span className="text-xs text-slate-500">PKR</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-green-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-500/10 rounded-xl text-green-400">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Domestic Students</div>
+                  <div className="text-2xl font-bold text-slate-100">{domesticCount}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">From Pakistan</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-purple-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                  <Globe size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">International</div>
+                  <div className="text-2xl font-bold text-slate-100">{intlCount}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">Across the World</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-orange-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-500/10 rounded-xl text-orange-400">
+                  <Percent size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Conversion Rate</div>
+                  <div className="text-2xl font-bold text-slate-100">{conversionRate}%</div>
+                  <div className="text-[10px] text-slate-500 mt-1">{verifiedCount} Verified</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Analytics Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-blue-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                  <DollarSign size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Total Revenue</div>
+                  <div className="text-2xl font-bold text-slate-100">{totalRevenue.toLocaleString()} <span className="text-xs text-slate-500">PKR</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-green-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-500/10 rounded-xl text-green-400">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Domestic Students</div>
+                  <div className="text-2xl font-bold text-slate-100">{domesticCount}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">From Pakistan</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-purple-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                  <Globe size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">International</div>
+                  <div className="text-2xl font-bold text-slate-100">{intlCount}</div>
+                  <div className="text-[10px] text-slate-500 mt-1">Across the World</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-orange-500/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-500/10 rounded-xl text-orange-400">
+                  <Percent size={24} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Conversion Rate</div>
+                  <div className="text-2xl font-bold text-slate-100">{conversionRate}%</div>
+                  <div className="text-[10px] text-slate-500 mt-1">{verifiedCount} Verified</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-12">
             {/* Pending Section */}
@@ -525,6 +663,22 @@ function App() {
             Admit<span className="text-blue-400">Pay</span> Admission
           </h2>
           <p className="text-lg text-slate-400 font-medium tracking-wide">Global Education Portal 2026</p>
+          
+          <div className="flex justify-center gap-4 mt-8">
+            <button 
+              onClick={() => { setCurrentView('form'); resetForm(); }}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${currentView === 'form' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}
+            >
+              Registration Form
+            </button>
+            <button 
+              onClick={() => { setCurrentView('checker'); resetForm(); }}
+              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${currentView === 'checker' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}
+            >
+              Check Status
+            </button>
+          </div>
+
           <button
             onClick={() => {
               const pass = prompt('Enter Admin Password:');
@@ -540,7 +694,97 @@ function App() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-10 space-y-8">
+        {currentView === 'checker' ? (
+          <div className="p-10 space-y-8 animate-in fade-in duration-500">
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-bold text-slate-100">Check Your Admission Status</h3>
+              <p className="text-slate-500 text-sm">Enter the details you used during registration.</p>
+            </div>
+
+            <form onSubmit={handleCheckStatus} className="max-w-md mx-auto space-y-6">
+              <div className="space-y-4">
+                <div className="group space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+                    <input 
+                      type="email" 
+                      required 
+                      placeholder="e.g. name@example.com"
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all"
+                      value={checkEmail}
+                      onChange={(e) => setCheckEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="group space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Transaction ID (TID)</label>
+                  <div className="relative">
+                    <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="Enter your 10-12 digit TID"
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all text-sm font-mono tracking-widest uppercase"
+                      value={checkTid}
+                      onChange={(e) => setCheckTid(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={statusLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(59,130,246,0.5)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 group"
+              >
+                {statusLoading ? <Loader2 className="animate-spin" size={20} /> : (
+                  <>
+                    <ClipboardList className="group-hover:translate-x-1 transition-transform" size={20} />
+                    Verify My Status
+                  </>
+                )}
+              </button>
+            </form>
+
+            {message && !statusResult && (
+              <div className="max-w-md mx-auto p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-400 text-sm animate-in zoom-in duration-300">
+                <AlertCircle size={18} className="shrink-0" />
+                {message}
+              </div>
+            )}
+
+            {statusResult && (
+              <div className="max-w-md mx-auto bg-slate-800/30 border border-slate-700 rounded-3xl p-8 space-y-6 animate-in slide-in-from-bottom duration-500 text-center">
+                <div className="flex justify-center">
+                  <div className={`p-4 rounded-full ${statusResult.status.toLowerCase() === 'verified' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                    {statusResult.status.toLowerCase() === 'verified' ? <CheckCircle size={40} /> : <Loader2 className="animate-spin" size={40} />}
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <h4 className="text-xl font-bold text-white">{statusResult.fullName}</h4>
+                  <p className="text-slate-500 text-sm">{statusResult.course}</p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-700/50">
+                  <div className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-600 mb-2">Admission Status</div>
+                  <div className={`text-2xl font-black tracking-wider ${statusResult.status.toLowerCase() === 'verified' ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {statusResult.status.toUpperCase()}
+                  </div>
+                </div>
+
+                {statusResult.status.toLowerCase() !== 'verified' && (
+                  <p className="text-xs text-slate-500 italic">
+                    We are currently matching your payment. Once verified, you will receive an official confirmation email.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-10 space-y-8">
           <div className="flex items-center justify-between p-6 bg-slate-950/40 rounded-2xl border border-slate-800/50 group transition-all duration-300 hover:border-blue-500/30">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-xl transition-colors duration-500 ${isInternational ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
@@ -816,13 +1060,14 @@ function App() {
             </div>
           )}
 
-          <button type="submit" className="w-full relative group overflow-hidden py-5 rounded-2xl font-black text-xl tracking-widest uppercase transition-all shadow-[0_0_30px_-5px_transparent] hover:shadow-blue-500/40">
+          <button type="submit" className="w-full relative group overflow-hidden py-5 rounded-2xl font-black text-xl tracking-widest uppercase transition-all shadow-[0_0_30px_-5px_transparent] hover:shadow-blue-500/40 mt-8">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 transition-transform group-hover:scale-105 duration-500"></div>
             <span className="relative z-10 text-white flex items-center justify-center gap-3">
               Apply Admission <CheckCircle size={24} />
             </span>
           </button>
         </form>
+      )}
       </div>
     </div>
   );

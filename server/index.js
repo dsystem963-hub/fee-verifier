@@ -173,9 +173,35 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   };
 
   const bodyFields = ['message_body', 'message', 'msg', 'body', 'text', 'sms', 'messageBody'];
+  const senderFields = ['from', 'sender', 'sender_id', 'source', 'phone', 'address'];
+  
   const message_body = getField(req.body, bodyFields) || getField(req.query, bodyFields);
+  const sender = getField(req.body, senderFields) || getField(req.query, senderFields);
   
   if (!message_body) return res.status(400).json({ error: 'No message body' });
+
+  // --- Security: Sender ID Verification (Anti-Spoofing) ---
+  const isBankSender = (s) => {
+    if (!s) return true; // Allow if sender info is missing (fallback)
+    const senderStr = s.toString().trim();
+    // 1. Alphabetical IDs (e.g. JazzCash, EasyPaisa, HBL) are Banks
+    if (/^[A-Za-z\s\-]+$/.test(senderStr)) return true;
+    // 2. Short Codes (3-6 digits, e.g. 8558, 3737) are Banks
+    if (/^\d{3,6}$/.test(senderStr)) return true;
+    // 3. Whitelist: Add your testing phone number here to allow it
+    const TESTER_NUMBERS = ['+923000424244', '03000424244']; 
+    if (TESTER_NUMBERS.includes(senderStr) || TESTER_NUMBERS.some(n => senderStr.endsWith(n.replace('+', '')))) return true;
+    
+    return false; // Rejects regular numbers like +923211234567
+  };
+
+  if (sender && !isBankSender(sender)) {
+    console.warn(`[${new Date().toISOString()}] Security Alert: Blocked spoofed SMS from [${sender}]`);
+    return res.status(403).json({ 
+      error: 'Security Alert: Only Bank IDs or Whitelisted numbers are authorized to verify payments.',
+      sender: sender
+    });
+  }
 
   // Log incoming SMS for debugging
   try {
@@ -335,6 +361,43 @@ app.get('/api/v1/verify-payment/:tid', async (req, res) => {
     }
   } catch (err) {
     res.json({ verified: false });
+  }
+});
+
+// Student: Check Status by Email + TID
+app.get('/api/v1/student/status', async (req, res) => {
+  const { email, tid } = req.query;
+  if (!email || !tid) {
+    return res.status(400).json({ error: 'Email and TID are required' });
+  }
+
+  try {
+    const uppercaseTid = tid.trim().toUpperCase();
+    const { data: student } = await supabase
+      .from('admissions')
+      .select('*')
+      .eq('email', email.trim().toLowerCase())
+      .eq('transaction_id', uppercaseTid)
+      .maybeSingle();
+
+    if (!student) {
+      return res.status(404).json({ error: 'Admission record not found' });
+    }
+
+    const { data: log } = await supabase
+      .from('payment_logs')
+      .select('status')
+      .eq('transaction_id', uppercaseTid)
+      .maybeSingle();
+
+    res.json({
+      fullName: student.full_name,
+      course: student.course,
+      status: log ? log.status : 'Processing',
+      timestamp: student.timestamp
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
