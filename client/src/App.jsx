@@ -348,59 +348,6 @@ function App() {
             </div>
           </div>
 
-          {/* Analytics Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-blue-500/50 transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                  <DollarSign size={24} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Total Revenue</div>
-                  <div className="text-2xl font-bold text-slate-100">{totalRevenue.toLocaleString()} <span className="text-xs text-slate-500">PKR</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-green-500/50 transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-500/10 rounded-xl text-green-400">
-                  <Users size={24} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Domestic Students</div>
-                  <div className="text-2xl font-bold text-slate-100">{domesticCount}</div>
-                  <div className="text-[10px] text-slate-500 mt-1">From Pakistan</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-purple-500/50 transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                  <Globe size={24} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">International</div>
-                  <div className="text-2xl font-bold text-slate-100">{intlCount}</div>
-                  <div className="text-[10px] text-slate-500 mt-1">Across the World</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 shadow-xl group hover:border-orange-500/50 transition-all">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-500/10 rounded-xl text-orange-400">
-                  <Percent size={24} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Conversion Rate</div>
-                  <div className="text-2xl font-bold text-slate-100">{conversionRate}%</div>
-                  <div className="text-[10px] text-slate-500 mt-1">{verifiedCount} Verified</div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div className="space-y-12">
             {/* Pending Section */}

@@ -189,8 +189,12 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
     // 2. Short Codes (3-6 digits, e.g. 8558, 3737) are Banks
     if (/^\d{3,6}$/.test(senderStr)) return true;
     // 3. Whitelist: Add your testing phone number here to allow it
-    const TESTER_NUMBERS = ['+923000424244', '03000424244']; 
-    if (TESTER_NUMBERS.includes(senderStr) || TESTER_NUMBERS.some(n => senderStr.endsWith(n.replace('+', '')))) return true;
+    const TESTER_NUMBERS = ['03000424244']; 
+    if (senderStr && TESTER_NUMBERS.some(n => {
+      const cleanSender = senderStr.replace(/\D/g, '');
+      const cleanTester = n.replace(/\D/g, '');
+      return cleanSender.endsWith(cleanTester.slice(-10));
+    })) return true;
     
     return false; // Rejects regular numbers like +923211234567
   };
@@ -218,8 +222,8 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   let amt = null;
   let source = 'SMS Gateway';
 
-  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|Raast\s+Tx\s+ID|IBFT\s+Tx\s+ID|Tx\s+ID|TID|Ref|Tid|IBFT|TxID)[:\s]*([a-z0-9]+)/i);
-  const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR)[:\s]*([\d,.]+)/i);
+  const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|Raast\s+Tx\s+ID|IBFT\s+Tx\s+ID|Tx\s+ID|TID|Ref|Tid|IBFT|TxID|Reference|Ref\s+ID)[:\s]*([a-z0-9]+)/i);
+  const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR|Amt|Total|Paid)[:\s]*([\d,.]+)/i);
 
   if (tidMatch && amtMatch) {
     tid = tidMatch[1].trim().toUpperCase();
