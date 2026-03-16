@@ -159,8 +159,9 @@ const authenticateGateway = (req, res, next) => {
 
 // --- Task 2: Local SMS Parsing Engine ---
 app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
-  const payload = req.body;
-  console.log(`[${new Date().toISOString()}] Incoming SMS:`, payload);
+  const payload = { ...req.body, ...req.query };
+  console.log(`[${new Date().toISOString()}] Incoming SMS Detail:`, JSON.stringify(payload, null, 2));
+  console.log(`[${new Date().toISOString()}] Incoming Headers:`, JSON.stringify(req.headers, null, 2));
 
   const getField = (obj, variations) => {
     if (!obj) return null;
@@ -225,9 +226,17 @@ app.post('/api/v1/gateway/local-sms', authenticateGateway, async (req, res) => {
   const tidMatch = message_body.match(/(?:Transaction ID|Trans ID|Raast\s+Tx\s+ID|IBFT\s+Tx\s+ID|Tx\s+ID|TID|Ref|Tid|IBFT|TxID|Reference|Ref\s+ID)[:\s]*([a-z0-9]+)/i);
   const amtMatch = message_body.match(/(?:Rs\.?|Amount|PKR|Amt|Total|Paid)[:\s]*([\d,.]+)/i);
 
+  console.log(`[${new Date().toISOString()}] Parsing Result:`, { 
+    tidFound: !!tidMatch, 
+    amtFound: !!amtMatch,
+    rawTid: tidMatch ? tidMatch[1] : null,
+    rawAmt: amtMatch ? amtMatch[1] : null
+  });
+
   if (tidMatch && amtMatch) {
     tid = tidMatch[1].trim().toUpperCase();
     amt = parseFloat(amtMatch[1].replace(/,/g, ''));
+    console.log(`[${new Date().toISOString()}] Formatted: TID=[${tid}], AMT=[${amt}]`);
 
     try {
       const { error: logError } = await supabase
