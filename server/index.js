@@ -30,23 +30,34 @@ try {
 }
 
 // Email Transporter (Configured via .env)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true', // 'true' for port 465, 'false' for 587
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    // Helpful for some custom domain providers
-    rejectUnauthorized: false
-  }
-});
-
-console.log(`[Email Config] Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port: ${process.env.SMTP_PORT || 587}, Secure: ${process.env.SMTP_SECURE === 'true'}`);
+let transporter;
+try {
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const isSecure = process.env.SMTP_SECURE === 'true';
+  
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: smtpPort,
+    secure: isSecure,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false // Helps with some custom domain certs
+    }
+  });
+  console.log(`[Email Config] Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port: ${smtpPort}, Secure: ${isSecure}`);
+} catch (transporterError) {
+  console.error('FAILED to initialize Email Transporter:', transporterError.message);
+}
 
 const sendVerificationEmail = async (toEmail, studentName, tid) => {
+  if (!transporter) {
+    console.warn('Email Transporter not initialized. Skipping email for:', toEmail);
+    return;
+  }
+
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('SMTP Credentials missing. Skipping email for:', toEmail);
     return;
