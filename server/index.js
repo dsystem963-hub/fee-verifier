@@ -38,7 +38,13 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    // Helpful for some custom domain providers
+    rejectUnauthorized: false
+  }
 });
+
+console.log(`[Email Config] Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}, Port: ${process.env.SMTP_PORT || 587}, Secure: ${process.env.SMTP_SECURE === 'true'}`);
 
 const sendVerificationEmail = async (toEmail, studentName, tid) => {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
