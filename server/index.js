@@ -36,12 +36,12 @@ try {
   const isSecure = process.env.SMTP_SECURE === 'true';
   
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    host: (process.env.SMTP_HOST || 'smtp.gmail.com').trim(),
     port: smtpPort,
     secure: isSecure,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: (process.env.SMTP_USER || '').trim(),
+      pass: (process.env.SMTP_PASS || '').replace(/\s/g, ''),
     },
     tls: {
       rejectUnauthorized: false // Helps with some custom domain certs
