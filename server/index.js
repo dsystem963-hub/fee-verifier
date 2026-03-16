@@ -47,16 +47,38 @@ const sendVerificationEmail = async (toEmail, studentName, tid) => {
   }
 
   const mailOptions = {
-    from: `"Admissions Portal" <${process.env.SMTP_USER}>`,
+    from: `"AdmitPay Admissions" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: 'Action Required: Admission Payment Verified',
+    subject: `✅ Payment Verified: Welcome to AdmitPay! (TID: ${tid})`,
     html: `
-      <h2>Payment Verified!</h2>
-      <p>Dear ${studentName},</p>
-      <p>We are pleased to inform you that your payment for Transaction ID <b>${tid}</b> has been successfully verified.</p>
-      <p>Your admission form status is now updated. Welcome to the Global Education Portal 2026!</p>
-      <br/>
-      <p>Best Regards,<br/>Admissions Team</p>
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0f172a; color: #f8fafc; border-radius: 24px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; color: #ffffff;">Admit<span style="color: #93c5fd;">Pay</span></h1>
+          <p style="margin: 10px 0 0 0; color: #bfdbfe; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">Admission Portal 2026</p>
+        </div>
+        
+        <div style="padding: 40px; text-align: center;">
+          <div style="background-color: #1e293b; display: inline-block; padding: 15px; rounded-radius: 50%; margin-bottom: 25px;">
+            <div style="color: #4ade80; font-size: 40px; line-height: 1;">✓</div>
+          </div>
+          
+          <h2 style="margin: 0 0 15px 0; font-size: 24px; font-weight: 700; color: #ffffff;">Payment Verified!</h2>
+          <p style="margin: 0; color: #94a3b8; line-height: 1.6;">Dear <b>${studentName}</b>,</p>
+          <p style="margin: 10px 0 30px 0; color: #94a3b8; line-height: 1.6;">We have successfully verified your payment for the 2026 academic session. Your admission record has been updated and your seat is now secured.</p>
+          
+          <div style="background-color: #1e293b; border-radius: 16px; padding: 25px; margin-bottom: 30px; border: 1px solid #334155;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 5px;">Transaction Reference</div>
+            <div style="font-family: 'Courier New', Courier, monospace; font-size: 18px; font-weight: 700; color: #60a5fa;">${tid}</div>
+          </div>
+          
+          <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 14px;">You can now check your official admission status on our portal anytime using your email and the TID above.</p>
+        </div>
+        
+        <div style="background-color: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155;">
+          <p style="margin: 0; color: #64748b; font-size: 12px;">This is an automated message from the AdmitPay Admissions System. Please do not reply to this email.</p>
+          <p style="margin: 10px 0 0 0; color: #475569; font-size: 11px;">&copy; 2026 AdmitPay Education Portal. All rights reserved.</p>
+        </div>
+      </div>
     `,
   };
 
