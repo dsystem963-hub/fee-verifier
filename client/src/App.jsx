@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight, MapPin, ChevronDown, Users, Percent, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, CheckCircle, AlertCircle, Loader2, Globe, User, GraduationCap, DollarSign, Upload, FileDown, Image as ImageIcon, Search, ChevronLeft, ChevronRight, MapPin, ChevronDown, Users, Percent, ClipboardList, Mail, Hash } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { countries } from './countries';
 
