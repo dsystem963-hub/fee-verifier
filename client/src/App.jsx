@@ -65,6 +65,7 @@ function App() {
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Record not found. Please check your details.';
       setMessage(errorMsg);
+      setTimeout(() => setMessage(''), 5000);
     } finally {
       setStatusLoading(false);
     }
@@ -158,11 +159,11 @@ function App() {
       try {
         await axios.post(`${API_BASE}/admission/international-payment`, data);
         setMessage('Success! Your international payment evidence has been submitted for manual approval.');
-        resetForm();
         setTimeout(() => setMessage(''), 5000);
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting payment evidence.';
         setMessage(errorMsg);
+        setTimeout(() => setMessage(''), 5000);
       }
     } else {
       try {
@@ -190,6 +191,7 @@ function App() {
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Error submitting admission form.';
         setMessage(errorMsg);
+        setTimeout(() => setMessage(''), 5000);
       }
     }
   };
